@@ -18,8 +18,6 @@ class ChatGPT:
         }
         self.conversation_id = conversation_id
         self.parent_id = str(uuid.uuid4())
-        if not self.session_token:
-            raise ValueError('Please provide a session token')
         self.refresh_auth()
 
     def refresh_auth(self) -> None:
