@@ -96,7 +96,10 @@ class ChatGPT:
         except IndexError:
             data = resp.json()
             if 'detail' in data:
-                if data['detail']['code'] == 'token_expired':
+                if (
+                    'code' in data['detail']
+                    and data['detail']['code'] == 'token_expired'
+                ):
                     raise ValueError('Token expired')
                 print(data)
                 raise ValueError('Unknown error')
