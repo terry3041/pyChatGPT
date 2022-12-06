@@ -32,7 +32,7 @@ api.refresh_auth()  # refresh the authorization token
 api.reset_conversation()  # reset the conversation
 ```
 
-### Insipration
+## Insipration
 
 This project is inspired by
 

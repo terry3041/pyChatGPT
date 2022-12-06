@@ -50,7 +50,7 @@ class ChatGPT:
 
     def reset_conversation(self) -> None:
         '''
-        Reset the conversation ID
+        Reset the conversation
         '''
         self.conversation_id = None
         self.parent_id = str(uuid.uuid4())
