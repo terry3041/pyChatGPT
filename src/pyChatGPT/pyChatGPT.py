@@ -5,6 +5,12 @@ import json
 
 class ChatGPT:
     def __init__(self, session_token: str, conversation_id: str = None) -> None:
+        '''
+        Initialize the ChatGPT class\n
+        Parameters:
+        - session_token: Your session token in cookies named as `__Secure-next-auth.session-token` from https://chat.openai.com/chat
+        - conversation_id: (optional) The conversation ID if you want to continue a conversation
+        '''
         self.session_token = session_token
         self.headers = {
             'Cookie': f'__Secure-next-auth.session-token={self.session_token}',
@@ -17,6 +23,9 @@ class ChatGPT:
         self.refresh_auth()
 
     def refresh_auth(self) -> None:
+        '''
+        Refresh the authorization token
+        '''
         r = requests.get(
             'https://chat.openai.com/api/auth/session',
             headers=self.headers,
@@ -40,10 +49,22 @@ class ChatGPT:
         self.headers['Authorization'] = f'Bearer {access_token}'
 
     def reset_conversation(self) -> None:
+        '''
+        Reset the conversation ID
+        '''
         self.conversation_id = None
         self.parent_id = str(uuid.uuid4())
 
     def send_message(self, message: str) -> dict:
+        '''
+        Send a message to the chatbot\n
+        Parameters:
+        - message: The message you want to send\n
+        Returns a `dict` with the following keys:
+        - message: The message the chatbot sent
+        - conversation_id: The conversation ID
+        - parent_id: The parent message ID
+        '''
         r = requests.post(
             'https://chat.openai.com/backend-api/conversation',
             headers=self.headers,

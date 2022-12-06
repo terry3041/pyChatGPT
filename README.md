@@ -23,10 +23,13 @@ python -m pyChatGPT
 ```python
 from pyChatGPT import ChatGPT
 
-session_token = 'abc123'
+session_token = 'abc123'  # `__Secure-next-auth.session-token` cookie from https://chat.openai.com/chat
 api = ChatGPT(session_token)
 resp = api.send_message('Hello, world!')
 print(resp['message'])
+
+api.refresh_auth()  # refresh the authorization token
+api.reset_conversation()  # reset the conversation
 ```
 
 ### Insipration
