@@ -1,5 +1,7 @@
 # pyChatGPT
 
+[![PyPi](https://img.shields.io/pypi/v/pyChatGPT.svg)](https://pypi.python.org/pypi/pyChatGPT)
+
 An unofficial Python wrapper for OpenAI's ChatGPT API
 
 ## Getting Started
