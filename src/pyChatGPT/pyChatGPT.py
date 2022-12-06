@@ -30,7 +30,7 @@ class ChatGPT:
             raise ValueError('Unknown error')
 
         if not data:
-            raise ValueError('No data in auth response')
+            raise ValueError('Invalid session token')
         elif 'error' in data:
             if data['error'] == 'RefreshAccessTokenError':
                 raise ValueError('Token expired')

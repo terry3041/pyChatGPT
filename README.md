@@ -12,6 +12,14 @@ pip install pyChatGPT
 
 ### Usage
 
+#### Interactive mode
+
+```bash
+python -m pyChatGPT
+```
+
+#### Import as a module
+
 ```python
 from pyChatGPT import ChatGPT
 
