@@ -1,9 +1,13 @@
-import requests
 import uuid
 import json
+import requests
 
 
 class ChatGPT:
+    '''
+    An unofficial Python wrapper for OpenAI's ChatGPT API
+    '''
+
     def __init__(self, session_token: str, conversation_id: str = None) -> None:
         '''
         Initialize the ChatGPT class\n
@@ -24,25 +28,24 @@ class ChatGPT:
         '''
         Refresh the authorization token
         '''
-        r = requests.get(
+        resp = requests.get(
             'https://chat.openai.com/api/auth/session',
             headers=self.headers,
         )
-        if r.status_code != 200:
-            raise ValueError(f'Status code {r.status_code}')
+        if resp.status_code != 200:
+            raise ValueError(f'Status code {resp.status_code}')
         try:
-            data = r.json()
+            data = resp.json()
         except Exception:
-            print(r.text)
+            print(resp.text)
             raise ValueError('Unknown error')
 
         if not data:
             raise ValueError('Invalid session token')
-        elif 'error' in data:
+        if 'error' in data:
             if data['error'] == 'RefreshAccessTokenError':
                 raise ValueError('Token expired')
-            else:
-                raise ValueError(data['error'])
+            raise ValueError(data['error'])
         access_token = data['accessToken']
         self.headers['Authorization'] = f'Bearer {access_token}'
 
@@ -63,7 +66,7 @@ class ChatGPT:
         - conversation_id: The conversation ID
         - parent_id: The parent message ID
         '''
-        r = requests.post(
+        resp = requests.post(
             'https://chat.openai.com/backend-api/conversation',
             headers=self.headers,
             json={
@@ -81,7 +84,7 @@ class ChatGPT:
             },
         )
         try:
-            data = list(r.iter_lines())[-4].decode('utf-8').lstrip('data: ')
+            data = list(resp.iter_lines())[-4].decode('utf-8').lstrip('data: ')
             data = json.loads(data)
             return {
                 'message': data['message']['content']['parts'][0],
@@ -89,13 +92,12 @@ class ChatGPT:
                 'parent_id': data['message']['id'],
             }
         except IndexError:
-            data = r.json()
+            data = resp.json()
             if 'detail' in data:
                 if data['detail']['code'] == 'token_expired':
                     raise ValueError('Token expired')
-                else:
-                    print(data)
-                    raise ValueError('Unknown error')
+                print(data)
+                raise ValueError('Unknown error')
         except Exception:
-            print(r.text)
+            print(resp.text)
             raise ValueError('Unknown error')

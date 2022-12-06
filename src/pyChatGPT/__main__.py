@@ -1,5 +1,5 @@
-from pyChatGPT import ChatGPT
 import os
+from pyChatGPT import ChatGPT
 
 
 def clear_screen():
@@ -22,7 +22,7 @@ if __name__ == '__main__':
                 'Conversation started. Type "reset" to reset the conversation. Type "reauth" to reauthenticate.'
             )
             continue
-        elif prompt.lower() == 'reauth':
+        if prompt.lower() == 'reauth':
             chat.refresh_auth()
             print('Reauthenticated.')
             continue
