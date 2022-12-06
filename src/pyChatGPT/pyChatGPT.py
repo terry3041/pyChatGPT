@@ -21,15 +21,23 @@ class ChatGPT:
             'https://chat.openai.com/api/auth/session',
             headers=self.headers,
         )
+        if r.status_code != 200:
+            raise ValueError(f'Status code {r.status_code}')
         try:
-            access_token = r.json()['accessToken']
-            self.headers['Authorization'] = f'Bearer {access_token}'
-        except KeyError:
-            print(r.text)
-            raise ValueError('Invalid session token')
+            data = r.json()
         except Exception:
             print(r.text)
             raise ValueError('Unknown error')
+
+        if not data:
+            raise ValueError('No data in auth response')
+        elif 'error' in data:
+            if data['error'] == 'RefreshAccessTokenError':
+                raise ValueError('Token expired')
+            else:
+                raise ValueError(data['error'])
+        access_token = data['accessToken']
+        self.headers['Authorization'] = f'Bearer {access_token}'
 
     def reset_conversation(self) -> None:
         self.conversation_id = None
@@ -61,6 +69,14 @@ class ChatGPT:
                 'conversation_id': data['conversation_id'],
                 'parent_id': data['message']['id'],
             }
+        except IndexError:
+            data = r.json()
+            if 'detail' in data:
+                if data['detail']['code'] == 'token_expired':
+                    raise ValueError('Token expired')
+                else:
+                    print(data)
+                    raise ValueError('Unknown error')
         except Exception:
             print(r.text)
             raise ValueError('Unknown error')
