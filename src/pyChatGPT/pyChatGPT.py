@@ -86,10 +86,12 @@ class ChatGPT:
         try:
             data = list(resp.iter_lines())[-4].decode('utf-8').lstrip('data: ')
             data = json.loads(data)
+            self.conversation_id = data['conversation_id']
+            self.parent_id = data['message']['id']
             return {
                 'message': data['message']['content']['parts'][0],
-                'conversation_id': data['conversation_id'],
-                'parent_id': data['message']['id'],
+                'conversation_id': self.conversation_id,
+                'parent_id': self.parent_id,
             }
         except IndexError:
             data = resp.json()
