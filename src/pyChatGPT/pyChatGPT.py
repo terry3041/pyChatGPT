@@ -33,19 +33,12 @@ class ChatGPT:
             headers=self.headers,
         )
         if resp.status_code != 200:
-            raise ValueError(f'Status code {resp.status_code}')
-        try:
-            data = resp.json()
-        except Exception:
             print(resp.text)
-            raise ValueError('Unknown error')
+            raise ValueError(f'Status code {resp.status_code}')
 
+        data = resp.json()
         if not data:
             raise ValueError('Invalid session token')
-        if 'error' in data:
-            if data['error'] == 'RefreshAccessTokenError':
-                raise ValueError('Token expired')
-            raise ValueError(data['error'])
         access_token = data['accessToken']
         self.headers['Authorization'] = f'Bearer {access_token}'
 
@@ -82,27 +75,18 @@ class ChatGPT:
                 'parent_message_id': self.parent_id,
                 'model': 'text-davinci-002-render',
             },
+            stream=True,
         )
-        try:
-            data = list(resp.iter_lines())[-4].decode('utf-8').lstrip('data: ')
-            data = json.loads(data)
-            self.conversation_id = data['conversation_id']
-            self.parent_id = data['message']['id']
-            return {
-                'message': data['message']['content']['parts'][0],
-                'conversation_id': self.conversation_id,
-                'parent_id': self.parent_id,
-            }
-        except IndexError:
-            data = resp.json()
-            if 'detail' in data:
-                if (
-                    'code' in data['detail']
-                    and data['detail']['code'] == 'token_expired'
-                ):
-                    raise ValueError('Token expired')
-                print(data)
-                raise ValueError('Unknown error')
-        except Exception:
+        if resp.status_code != 200:
             print(resp.text)
-            raise ValueError('Unknown error')
+            raise ValueError(f'Status code {resp.status_code}')
+
+        data = list(resp.iter_lines())[-4].decode('utf-8').lstrip('data: ')
+        data = json.loads(data)
+        self.conversation_id = data['conversation_id']
+        self.parent_id = data['message']['id']
+        return {
+            'message': data['message']['content']['parts'][0],
+            'conversation_id': self.conversation_id,
+            'parent_id': self.parent_id,
+        }
