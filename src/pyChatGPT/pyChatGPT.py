@@ -59,6 +59,7 @@ class ChatGPT:
         - conversation_id: The conversation ID
         - parent_id: The parent message ID
         '''
+        self.refresh_auth()
         resp = requests.post(
             'https://chat.openai.com/backend-api/conversation',
             headers=self.headers,
