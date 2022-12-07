@@ -16,7 +16,7 @@ class ChatGPT:
         Parameters:
         - session_token: Your session token in cookies named as `__Secure-next-auth.session-token` from https://chat.openai.com/chat
         - conversation_id: (optional) The conversation ID if you want to continue a conversation
-        - proxies: (optional) A `dict` of proxies to use, in the format of requests' proxies
+        - proxies: (optional) The proxy to use, in the format `http://ip:port` or `https://ip:port`
         '''
         self.session_token = session_token
         self.conversation_id = conversation_id
