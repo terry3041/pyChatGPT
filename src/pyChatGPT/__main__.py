@@ -1,5 +1,5 @@
-import os
 from pyChatGPT import ChatGPT
+import os
 
 
 def clear_screen():

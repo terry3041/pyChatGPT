@@ -1,6 +1,6 @@
+import requests
 import uuid
 import json
-import requests
 
 
 class ChatGPT:
@@ -38,8 +38,7 @@ class ChatGPT:
             proxies=self.proxies,
         )
         if resp.status_code != 200:
-            print(resp.text)
-            raise ValueError(f'Status code {resp.status_code}')
+            raise ValueError(f'Status code {resp.status_code}: {resp.text}')
 
         data = resp.json()
         if not data:
@@ -85,8 +84,7 @@ class ChatGPT:
             stream=True,
         )
         if resp.status_code != 200:
-            print(resp.text)
-            raise ValueError(f'Status code {resp.status_code}')
+            raise ValueError(f'Status code {resp.status_code}: {resp.text}')
 
         data = list(resp.iter_lines())[-4].decode('utf-8').lstrip('data: ')
         data = json.loads(data)
