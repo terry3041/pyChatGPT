@@ -28,9 +28,10 @@ python -m pyChatGPT
 from pyChatGPT import ChatGPT
 
 session_token = 'abc123'  # `__Secure-next-auth.session-token` cookie from https://chat.openai.com/chat
-api = ChatGPT(session_token)
-api2 = ChatGPT(session_token, conversation_id='conversation_id')  # specify a conversation id
-api3 = ChatGPT(session_token, proxy='http://proxy.example.com:8080')  # specify proxy
+api = ChatGPT(session_token)  # auth with session token
+api2 = ChatGPT(email='example@domain.com', password='password')  # auth with email and password
+api3 = ChatGPT(session_token, conversation_id='some-random-uuid')  # specify a conversation id
+api4 = ChatGPT(session_token, proxy='http://proxy.example.com:8080')  # specify proxy
 
 resp = api.send_message('Hello, world!')
 print(resp['message'])
