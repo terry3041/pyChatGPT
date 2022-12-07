@@ -8,20 +8,24 @@ class ChatGPT:
     An unofficial Python wrapper for OpenAI's ChatGPT API
     '''
 
-    def __init__(self, session_token: str, conversation_id: str = None) -> None:
+    def __init__(
+        self, session_token: str, conversation_id: str = None, proxies: dict = {}
+    ) -> None:
         '''
         Initialize the ChatGPT class\n
         Parameters:
         - session_token: Your session token in cookies named as `__Secure-next-auth.session-token` from https://chat.openai.com/chat
         - conversation_id: (optional) The conversation ID if you want to continue a conversation
+        - proxies: (optional) A `dict` of proxies to use, in the format of requests' proxies
         '''
         self.session_token = session_token
+        self.conversation_id = conversation_id
+        self.parent_id = str(uuid.uuid4())
+        self.proxies = proxies
         self.headers = {
             'Cookie': f'__Secure-next-auth.session-token={self.session_token}',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.62',
         }
-        self.conversation_id = conversation_id
-        self.parent_id = str(uuid.uuid4())
         self.refresh_auth()
 
     def refresh_auth(self) -> None:
@@ -31,6 +35,7 @@ class ChatGPT:
         resp = requests.get(
             'https://chat.openai.com/api/auth/session',
             headers=self.headers,
+            proxies=self.proxies,
         )
         if resp.status_code != 200:
             print(resp.text)
@@ -63,6 +68,7 @@ class ChatGPT:
         resp = requests.post(
             'https://chat.openai.com/backend-api/conversation',
             headers=self.headers,
+            proxies=self.proxies,
             json={
                 'action': 'next',
                 'messages': [
