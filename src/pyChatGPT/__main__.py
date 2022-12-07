@@ -7,8 +7,19 @@ def clear_screen():
 
 
 if __name__ == '__main__':
-    session_token = input('Please enter your session token: ')
-    chat = ChatGPT(session_token)
+    while True:
+        authMethod = input('Please enter your auth method (token or email): ')
+        if authMethod.lower() == 'token':
+            session_token = input('Please enter your session token: ')
+            chat = ChatGPT(session_token)
+            break
+        elif authMethod.lower() == 'email':
+            email = input('Please enter your email: ')
+            password = input('Please enter your password: ')
+            chat = ChatGPT(email, password)
+            break
+        clear_screen()
+
     clear_screen()
     print(
         'Conversation started. Type "reset" to reset the conversation. Type "reauth" to reauthenticate.'
