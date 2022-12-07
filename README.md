@@ -1,6 +1,8 @@
 # pyChatGPT
 
 [![PyPi](https://img.shields.io/pypi/v/pyChatGPT.svg)](https://pypi.python.org/pypi/pyChatGPT)
+[![License](https://img.shields.io/github/license/terry3041/pyChatGPT.svg?color=green)](https://github.com/terry3041/pyChatGPT/blob/main/LICENSE)
+![PyPi](https://img.shields.io/badge/code_style-black+flake8-blue.svg)
 
 An unofficial Python wrapper for OpenAI's ChatGPT API
 
@@ -40,3 +42,11 @@ This project is inspired by
 
 -   [ChatGPT](https://github.com/acheong08/ChatGPT)
 -   [chatgpt-api](https://github.com/transitive-bullshit/chatgpt-api)
+
+## Disclaimer
+
+This project is not affiliated with OpenAI in any way. Use at your own risk. I am not responsible for any damage caused by this project. Please read the [OpenAI Terms of Service](https://beta.openai.com/terms) before using this project.
+
+## License
+
+This project is licensed under the GPLv3 License - see the [LICENSE](LICENSE) file for details.
