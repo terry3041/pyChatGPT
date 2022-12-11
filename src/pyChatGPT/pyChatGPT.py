@@ -36,17 +36,34 @@ class ChatGPT:
             self.parent_id = str(uuid.uuid4())
         self.proxies = {'http': proxy, 'https': proxy} if proxy else {}
         self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.62',
+            'accept': '*/*',
+            'accept-encoding': 'gzip, deflate',
+            'accept-language': 'en-US;q=0.9,en;q=0.8',
+            'origin': 'https://chat.openai.com',
+            'referer': 'https://chat.openai.com/chat',
+            'sec-ch-ua': '"Not?A_Brand";v="8", "Chromium";v="108", "Microsoft Edge";v="108"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.46',
+            'x-openai-assistant-app-id': '',
         }
+        self.session = requests.Session()
+        self.session.headers = self.headers
+        self.session.proxies = self.proxies
+
         self.session_token = session_token
         if not self.session_token:
             if not email or not password:
                 raise ValueError('No session token or login credentials are provideddd')
-            self.session_token = self._login(email, password)
-        self.headers[
-            'Cookie'
-        ] = f'__Secure-next-auth.session-token={self.session_token}'
-        self.refresh_auth()
+            self._login(email, password)
+        else:
+            self.headers[
+                'Cookie'
+            ] = f'__Secure-next-auth.session-token={self.session_token}'
+            self.refresh_auth()
 
     def _login(self, email: str, password: str) -> str:
         '''
@@ -56,16 +73,17 @@ class ChatGPT:
         - password: Your OpenAI password\n
         Returns the session token
         '''
-        session = requests.Session()
-        session.headers = self.headers
-        session.proxies = self.proxies
+        self.session.headers = self.headers
+        self.session.proxies = self.proxies
 
         # Get the CSRF token
-        resp = session.get('https://chat.openai.com/api/auth/csrf')
+        resp = self.session.get('https://chat.openai.com/api/auth/csrf')
+        if resp.status_code != 200:
+            raise ValueError(f'Status code {resp.status_code}: {resp.text}')
         csrf_token = resp.json()['csrfToken']
 
         # Get state
-        resp = session.post(
+        resp = self.session.post(
             'https://chat.openai.com/api/auth/signin/auth0?prompt=login',
             data={'callbackUrl': '/', 'csrfToken': csrf_token, 'json': 'true'},
         )
@@ -74,9 +92,11 @@ class ChatGPT:
         redirect_url = resp.json()['url']
 
         # Redirect to auth0 /login/identifier
-        resp = session.get(redirect_url)
+        resp = self.session.get(redirect_url)
         if resp.status_code != 200:
             raise ValueError(f'Status code {resp.status_code}: {resp.text}')
+        if '<img alt="captcha"' in resp.text:
+            raise ValueError('Captcha detected')
         pattern = r'<input type="hidden" name="state" value="(.*)" \/>'
         results = re.findall(pattern, resp.text)
         if not results:
@@ -84,7 +104,7 @@ class ChatGPT:
         state = results[0]
 
         # Post email
-        resp = session.post(
+        resp = self.session.post(
             f'https://auth0.openai.com/u/login/identifier?state={state}',
             data={
                 'state': state,
@@ -100,7 +120,7 @@ class ChatGPT:
             raise ValueError(f'Status code {resp.status_code}: {resp.text}')
 
         # Post password
-        resp = session.post(
+        resp = self.session.post(
             f'https://auth0.openai.com/u/login/password?state={state}',
             data={
                 'state': state,
@@ -113,7 +133,7 @@ class ChatGPT:
             raise ValueError(f'Status code {resp.status_code}: {resp.text}')
 
         # Get session token in CookieJar
-        cookies = session.cookies.get_dict()
+        cookies = self.session.cookies.get_dict()
         if '__Secure-next-auth.session-token' not in cookies:
             raise ValueError(f'Could not get session token: {cookies}')
         return cookies['__Secure-next-auth.session-token']
@@ -122,11 +142,7 @@ class ChatGPT:
         '''
         Refresh the authorization token
         '''
-        resp = requests.get(
-            'https://chat.openai.com/api/auth/session',
-            headers=self.headers,
-            proxies=self.proxies,
-        )
+        resp = self.session.get('https://chat.openai.com/api/auth/session')
         if resp.status_code != 200:
             raise ValueError(f'Status code {resp.status_code}: {resp.text}')
 
@@ -143,6 +159,20 @@ class ChatGPT:
         self.conversation_id = None
         self.parent_id = str(uuid.uuid4())
 
+    def moderation(self) -> None:
+        '''
+        Fake moderation request
+        '''
+        resp = self.session.post(
+            'https://chat.openai.com/backend-api/moderations',
+            json={'input': 'Hello', 'model': 'text-moderation-playground'},
+        )
+        if resp.status_code != 200:
+            raise ValueError(f'Status code {resp.status_code}: {resp.text}')
+        data = resp.json()
+        if data['blocked'] or data['flagged']:
+            raise ValueError(f'Message is blocked or flagged: {resp.text}')
+
     def send_message(self, message: str) -> dict:
         '''
         Send a message to the chatbot\n
@@ -154,10 +184,9 @@ class ChatGPT:
         - parent_id: The parent message ID
         '''
         self.refresh_auth()
-        resp = requests.post(
+        self.moderation()
+        resp = self.session.post(
             'https://chat.openai.com/backend-api/conversation',
-            headers=self.headers,
-            proxies=self.proxies,
             json={
                 'action': 'next',
                 'messages': [
