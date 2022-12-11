@@ -15,6 +15,7 @@ class ChatGPT:
         email: str = None,
         password: str = None,
         conversation_id: str = None,
+        parent_id: str = None,
         proxy: str = None,
     ) -> None:
         '''
@@ -25,10 +26,14 @@ class ChatGPT:
         - email: (optional) Your OpenAI email
         - password: (optional) Your OpenAI password
         - conversation_id: (optional) The conversation ID if you want to continue a conversation
+        - parent_id: (optional) The parent ID if you want to continue a conversation
         - proxy: (optional) The proxy to use, in URL format (i.e. `https://ip:port`)
         '''
         self.conversation_id = conversation_id
-        self.parent_id = str(uuid.uuid4())
+        if parent_id:
+            self.parent_id = parent_id
+        else:
+            self.parent_id = str(uuid.uuid4())
         self.proxies = {'http': proxy, 'https': proxy} if proxy else {}
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.62',
