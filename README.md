@@ -57,9 +57,11 @@ api.reset_conversation()  # reset the conversation
 ```bash
 # install chromium
 sudo apt install chromium
+
 # install X virtual framebuffer
 sudo apt install xvfb
-# start a xvfb with your script
+
+# start a Xvfb with your script
 xvfb-run -a python3 your_script.py
 ```
 

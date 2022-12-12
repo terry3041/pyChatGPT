@@ -2,11 +2,14 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.common import exceptions as SeleniumExceptions
+import undetected_chromedriver as uc
 
 from requests.adapters import HTTPAdapter
 from datetime import datetime, timedelta
-import undetected_chromedriver as uc
+from urllib.parse import unquote
+import svg_captcha_solver
 import requests
+import base64
 import uuid
 import json
 import re
@@ -163,8 +166,13 @@ class ChatGPT:
         resp = self.session.get(redirect_url)
         if resp.status_code != 200:
             raise ValueError(f'Status code {resp.status_code}: {resp.text}')
+
+        captcha = None
         if '<img alt="captcha"' in resp.text:
-            raise ValueError('Captcha detected')
+            captcha_src = re.findall(r'<img alt="captcha" src="([^"]+)"', resp.text)[0]
+            svg = base64.b64decode(captcha_src.split(',')[1])
+            captcha = svg_captcha_solver.solve_captcha(svg)
+
         pattern = r'<input type="hidden" name="state" value="(.*)" \/>'
         results = re.findall(pattern, resp.text)
         if not results:
@@ -172,17 +180,20 @@ class ChatGPT:
         state = results[0]
 
         # Post email
+        payload = {
+            'state': state,
+            'username': email,
+            'js-available': 'true',
+            'webauthn-available': 'true',
+            'is-brave': 'false',
+            'webauthn-platform-available': 'false',
+            'action': 'default',
+        }
+        if captcha:
+            payload['captcha'] = captcha
         resp = self.session.post(
             f'https://auth0.openai.com/u/login/identifier?state={state}',
-            data={
-                'state': state,
-                'username': email,
-                'js-available': 'false',
-                'webauthn-available': 'true',
-                'is-brave': 'false',
-                'webauthn-platform-available': 'false',
-                'action': 'default',
-            },
+            data=payload,
         )
         if resp.status_code != 200:
             raise ValueError(f'Status code {resp.status_code}: {resp.text}')
@@ -203,7 +214,9 @@ class ChatGPT:
         # Get session token in CookieJar
         cookies = self.session.cookies.get_dict()
         if '__Secure-next-auth.session-token' not in cookies:
-            raise ValueError(f'Could not get session token: {cookies}')
+            if resp.url.startswith('https://chat.openai.com/auth/error?error='):
+                raise ValueError(unquote(resp.url.split('error=')[1]))
+            raise ValueError(f'Could not get session token: {resp.text}')
         return cookies['__Secure-next-auth.session-token']
 
     def __refresh_auth(self) -> None:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyChatGPT"
-version = "0.2.4"
+version = "0.2.5"
 authors = [
     { name="terry3041", email="s71czbem@duck.com" },
 ]
@@ -18,6 +18,7 @@ classifiers = [
 ]
 dependencies = [
     'undetected-chromedriver >= 3.1.7',
+    'svg-captcha-solver @ https://github.com/dinhitcom/svg-captcha-solver/archive/master.zip',
     'requests',
     'uuid',
 ]
