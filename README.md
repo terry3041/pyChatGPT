@@ -50,6 +50,21 @@ print(resp['message'])
 api.reset_conversation()  # reset the conversation
 ```
 
+## Frequently Asked Questions
+
+### How do I get it to work on headless linux server?
+
+```bash
+# 1. Install chromium
+sudo apt install chromium
+# 2. Install X virtual framebuffer
+sudo apt install xvfb
+# 3. Start X virtual framebuffer
+Xvfb :99 -ac & export DISPLAY=:99
+# 4. Run your script
+python3 your_script.py
+```
+
 ## Insipration
 
 This project is inspired by
