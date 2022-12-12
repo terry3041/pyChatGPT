@@ -17,6 +17,8 @@ class ChatGPT:
         conversation_id: str = None,
         parent_id: str = None,
         proxy: str = None,
+        user_agent: str = None,
+        cf_clearance: str = None,
     ) -> None:
         '''
         Initialize the ChatGPT class\n
@@ -50,11 +52,16 @@ class ChatGPT:
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.46',
             'x-openai-assistant-app-id': '',
         }
+
+        if user_agent:
+            self.headers['user-agent'] = user_agent
+
         self.session = requests.Session()
         self.session.headers = self.headers
         self.session.proxies = self.proxies
 
         self.session_token = session_token
+        self.cf_clearance = cf_clearance
         if not self.session_token:
             if not email or not password:
                 raise ValueError('No session token or login credentials are provideddd')
@@ -62,7 +69,7 @@ class ChatGPT:
         else:
             self.headers[
                 'Cookie'
-            ] = f'__Secure-next-auth.session-token={self.session_token}'
+            ] = f'__Secure-next-auth.session-token={self.session_token}; cf_clearance={self.cf_clearance};'
             self.refresh_auth()
 
     def _login(self, email: str, password: str) -> str:

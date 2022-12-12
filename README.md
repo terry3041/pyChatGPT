@@ -40,6 +40,7 @@ api = ChatGPT(session_token)  # auth with session token
 api2 = ChatGPT(email='example@domain.com', password='password')  # auth with email and password
 api3 = ChatGPT(session_token, conversation_id='some-random-uuid', parent_id='another-random-uuid')  # specify a conversation
 api4 = ChatGPT(session_token, proxy='http://proxy.example.com:8080')  # specify proxy
+api5 = ChatGPT(session_token='value-session-token', cf_clearance='value-cf-clearance', user_agent='user-agent-used-bypass-cf-clearance')  # support cloudflare challange
 
 resp = api.send_message('Hello, world!')
 print(resp['message'])
