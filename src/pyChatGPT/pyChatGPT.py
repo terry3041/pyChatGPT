@@ -77,7 +77,7 @@ class ChatGPT:
         self.session.cookies.set('__Secure-next-auth.session-token', self.session_token)
         self.__refresh_auth()
 
-    def __get_cf_cookies(self) -> None:
+    def __get_cf_cookies(self, retry: int = 0) -> None:
         '''
         Get the Cloudflare cookies & user-agent
         '''
@@ -137,7 +137,14 @@ class ChatGPT:
                 EC.presence_of_element_located((By.TAG_NAME, 'pre'))
             )
         except SeleniumExceptions.TimeoutException:
-            raise ValueError(f'Cloudflare challenge failed: {self.driver.page_source}')
+            resp_text = self.driver.page_source
+            self.driver.quit()
+            if is_headless:
+                display.stop()
+            if '<title>Just a moment...</title>' in resp_text:
+                if retry <= 2:
+                    return self.__get_cf_cookies(retry + 1)
+            raise ValueError(f'Cloudflare challenge failed: {resp_text}')
 
         # We only need the cf cookies
         self.cookies = [
