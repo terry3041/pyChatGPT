@@ -7,7 +7,6 @@ import undetected_chromedriver as uc
 from requests.adapters import HTTPAdapter
 from datetime import datetime, timedelta
 from urllib.parse import unquote
-import svg_captcha_solver
 import requests
 import base64
 import uuid
@@ -169,6 +168,12 @@ class ChatGPT:
 
         captcha = None
         if '<img alt="captcha"' in resp.text:
+            try:
+                import svg_captcha_solver
+            except ModuleNotFoundError:
+                raise ModuleNotFoundError(
+                    'Please install svg_captcha_solver to solve captchas: pip install https://github.com/dinhitcom/svg-captcha-solver/archive/master.zip'
+                )
             captcha_src = re.findall(r'<img alt="captcha" src="([^"]+)"', resp.text)[0]
             svg = base64.b64decode(captcha_src.split(',')[1])
             captcha = svg_captcha_solver.solve_captcha(svg)

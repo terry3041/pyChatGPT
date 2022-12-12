@@ -18,7 +18,6 @@ classifiers = [
 ]
 dependencies = [
     'undetected-chromedriver >= 3.1.7',
-    'svg-captcha-solver @ https://github.com/dinhitcom/svg-captcha-solver/archive/master.zip',
     'requests',
     'uuid',
 ]
