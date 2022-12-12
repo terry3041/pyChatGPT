@@ -62,14 +62,11 @@ api.reset_conversation()  # reset the conversation
 ### How do I get it to work on headless linux server?
 
 ```bash
-# install chromium
-sudo apt install chromium
+# install chromium & X virtual framebuffer
+sudo apt install chromium xvfb
 
-# install X virtual framebuffer
-sudo apt install xvfb
-
-# start a Xvfb with your script
-xvfb-run -a python3 your_script.py
+# start your script
+python3 your_script.py
 ```
 
 ## Insipration
