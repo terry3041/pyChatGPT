@@ -6,12 +6,14 @@ import undetected_chromedriver as uc
 
 from requests.adapters import HTTPAdapter
 from datetime import datetime, timedelta
+from pyvirtualdisplay import Display
 from urllib.parse import unquote
 import requests
 import base64
 import uuid
 import json
 import re
+import os
 
 
 class ChatGPT:
@@ -84,6 +86,19 @@ class ChatGPT:
         ):
             return
 
+        # Detect if we are running in a headless environment
+        is_headless = os.name == 'posix' and 'DISPLAY' not in os.environ
+        if is_headless:
+            try:
+                display = Display()
+            except FileNotFoundError as e:
+                if 'No such file or directory: \'Xvfb\'' in str(e):
+                    raise ValueError(
+                        'Headless machine detected. Please install Xvfb to start a virtual display: sudo apt install xvfb'
+                    )
+                raise e
+            display.start()
+
         # Start the browser
         options = uc.ChromeOptions()
         options.add_argument('--window-size=1,1')
@@ -135,6 +150,8 @@ class ChatGPT:
 
         # Close the browser
         self.driver.quit()
+        if is_headless:
+            display.stop()
 
     def __login(self, email: str, password: str) -> str:
         '''
