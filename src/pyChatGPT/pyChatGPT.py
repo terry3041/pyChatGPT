@@ -1,12 +1,15 @@
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException
+from selenium.common import exceptions as SeleniumExceptions
 
+from requests.adapters import HTTPAdapter
+from datetime import datetime, timedelta
 import undetected_chromedriver as uc
 import requests
 import uuid
 import json
+import re
 
 
 class ChatGPT:
@@ -16,19 +19,25 @@ class ChatGPT:
 
     def __init__(
         self,
-        session_token: str,
+        session_token: str = None,
+        email: str = None,
+        password: str = None,
         conversation_id: str = None,
         parent_id: str = None,
         proxy: str = None,
+        cf_refresh_interval: int = 30,
     ) -> None:
         '''
         Initialize the ChatGPT class\n
         Either provide a session token or email and password\n
         Parameters:
-        - session_token: Your session token in cookies named as `__Secure-next-auth.session-token` from https://chat.openai.com/chat
+        - session_token: (optional) Your session token in cookies named as `__Secure-next-auth.session-token` from https://chat.openai.com/chat
+        - email: (optional) Your OpenAI email
+        - password: (optional) Your OpenAI password
         - conversation_id: (optional) The conversation ID if you want to continue a conversation
         - parent_id: (optional) The parent ID if you want to continue a conversation
         - proxy: (optional) The proxy to use, in URL format (i.e. `https://ip:port`)
+        - cf_refresh_interval: (optional) The interval in minutes to refresh the Cloudflare cookies
         '''
         self.conversation_id = conversation_id
         if parent_id:
@@ -37,70 +46,181 @@ class ChatGPT:
             self.parent_id = str(uuid.uuid4())
 
         self.proxy = proxy
-        self.proxies = {'http': proxy, 'https': proxy} if proxy else {}
+        self.cookies = []
         self.headers = {
             'accept': '*/*',
             'accept-encoding': 'gzip, deflate',
-            'accept-language': 'en-US;q=0.9,en;q=0.8',
             'origin': 'https://chat.openai.com',
             'referer': 'https://chat.openai.com/chat',
             'x-openai-assistant-app-id': '',
         }
         self.session = requests.Session()
         self.session.headers = self.headers
-        self.session.proxies = self.proxies
+        self.session.proxies = {'http': proxy, 'https': proxy} if self.proxy else {}
+        self.session.mount('https://chat.openai.com', HTTPAdapter(max_retries=5))
 
+        self._last_cf = None
+        self.cf_refresh_interval = cf_refresh_interval
         self.session_token = session_token
-        options = uc.ChromeOptions()
+        if not self.session_token:
+            if not email or not password:
+                raise ValueError(
+                    'Either session_token or email and password must be provided'
+                )
+            self.session_token = self._login(email, password)
 
+        self.session.cookies.set('__Secure-next-auth.session-token', self.session_token)
+        self.refresh_auth()
+
+    def _get_cf_cookies(self) -> None:
+        '''
+        Get the Cloudflare cookies & user-agent
+        '''
+        # Don't refresh the cf cookies if they are less than 30 minutes old
+        if self._last_cf and datetime.now() - self._last_cf < timedelta(
+            minutes=self.cf_refresh_interval
+        ):
+            return
+
+        # Start the browser
+        options = uc.ChromeOptions()
+        options.add_argument('--window-size=1,1')
         if self.proxy:
             options.add_argument(f'--proxy-server={self.proxy}')
         try:
             self.driver = uc.Chrome(options=options)
         except TypeError as e:
             if str(e) == 'expected str, bytes or os.PathLike object, not NoneType':
-                raise ValueError('Chrome is not installed or is not in PATH')
+                raise ValueError('Chrome installation not found')
             raise e
-        self.refresh_auth(init=True)
 
-    def refresh_auth(self, init: bool = False) -> None:
-        '''
-        Refresh the session's authorization & cookies\n
-        Parameters:
-        - init: (optional) Whether to initialize the session
-        '''
-        if init:
-            self.headers['user-agent'] = self.driver.execute_script(
-                'return navigator.userAgent'
-            )
+        # Set the user-agent to the one from the browser
+        self.headers['user-agent'] = self.driver.execute_script(
+            'return navigator.userAgent'
+        )
+        # Restore the cf cookies if they exist
+        for cookie in self.cookies:
             self.driver.execute_cdp_cmd(
                 'Network.setCookie',
                 {
-                    'domain': 'chat.openai.com',
-                    'path': '/',
-                    'name': '__Secure-next-auth.session-token',
-                    'value': self.session_token,
-                    'httpOnly': True,
-                    'secure': True,
+                    'domain': cookie['domain'],
+                    'path': cookie['path'],
+                    'name': cookie['name'],
+                    'value': cookie['value'],
+                    'httpOnly': cookie['httpOnly'],
+                    'secure': cookie['secure'],
                 },
             )
 
+        # Get the Cloudflare challenge
         self.driver.get('https://chat.openai.com/api/auth/session')
         try:
             WebDriverWait(self.driver, 15).until(
                 EC.presence_of_element_located((By.TAG_NAME, 'pre'))
             )
-        except TimeoutException:
+        except SeleniumExceptions.TimeoutException:
             raise ValueError(f'Cloudflare challenge failed: {self.driver.page_source}')
 
-        for cookie in self.driver.get_cookies():
+        # We only need the cf cookies
+        self.cookies = [
+            i
+            for i in self.driver.get_cookies()
+            if i['name'] in ['__cf_bm', 'cf_clearance']
+        ]
+        for cookie in self.cookies:
             self.session.cookies.set(cookie['name'], cookie['value'])
-        resp = self.driver.find_element(By.TAG_NAME, 'pre').text
-        data = json.loads(resp)
+        self._last_cf = datetime.now()
+
+        # Close the browser
+        self.driver.quit()
+
+    def _login(self, email: str, password: str) -> str:
+        '''
+        Login to OpenAI\n
+        Parameters:
+        - email: Your OpenAI email
+        - password: Your OpenAI password\n
+        Returns the session token
+        '''
+        self._get_cf_cookies()
+
+        # Get the CSRF token
+        resp = self.session.get('https://chat.openai.com/api/auth/csrf')
+        if resp.status_code != 200:
+            raise ValueError(f'Status code {resp.status_code}: {resp.text}')
+        csrf_token = resp.json()['csrfToken']
+
+        # Get state
+        resp = self.session.post(
+            'https://chat.openai.com/api/auth/signin/auth0?prompt=login',
+            data={'callbackUrl': '/', 'csrfToken': csrf_token, 'json': 'true'},
+        )
+        if resp.status_code != 200:
+            raise ValueError(f'Status code {resp.status_code}: {resp.text}')
+        redirect_url = resp.json()['url']
+
+        # Redirect to auth0 /login/identifier
+        resp = self.session.get(redirect_url)
+        if resp.status_code != 200:
+            raise ValueError(f'Status code {resp.status_code}: {resp.text}')
+        if '<img alt="captcha"' in resp.text:
+            raise ValueError('Captcha detected')
+        pattern = r'<input type="hidden" name="state" value="(.*)" \/>'
+        results = re.findall(pattern, resp.text)
+        if not results:
+            raise ValueError(f'Could not get state: {resp.text}')
+        state = results[0]
+
+        # Post email
+        resp = self.session.post(
+            f'https://auth0.openai.com/u/login/identifier?state={state}',
+            data={
+                'state': state,
+                'username': email,
+                'js-available': 'false',
+                'webauthn-available': 'true',
+                'is-brave': 'false',
+                'webauthn-platform-available': 'false',
+                'action': 'default',
+            },
+        )
+        if resp.status_code != 200:
+            raise ValueError(f'Status code {resp.status_code}: {resp.text}')
+
+        # Post password
+        resp = self.session.post(
+            f'https://auth0.openai.com/u/login/password?state={state}',
+            data={
+                'state': state,
+                'username': email,
+                'password': password,
+                'action': 'default',
+            },
+        )
+        if resp.status_code != 200:
+            raise ValueError(f'Status code {resp.status_code}: {resp.text}')
+
+        # Get session token in CookieJar
+        cookies = self.session.cookies.get_dict()
+        if '__Secure-next-auth.session-token' not in cookies:
+            raise ValueError(f'Could not get session token: {cookies}')
+        return cookies['__Secure-next-auth.session-token']
+
+    def refresh_auth(self) -> None:
+        '''
+        Refresh the session's authorization
+        '''
+        self._get_cf_cookies()
+
+        resp = self.session.get('https://chat.openai.com/api/auth/session')
+        if resp.status_code != 200:
+            raise ValueError(f'Invalid session token: {resp.text}')
+
+        data = resp.json()
         if not data:
             raise ValueError('Invalid session token')
         access_token = data['accessToken']
-        self.headers['Authorization'] = f'Bearer {access_token}'
+        self.headers['authorization'] = f'Bearer {access_token}'
 
     def reset_conversation(self) -> None:
         '''
@@ -109,10 +229,12 @@ class ChatGPT:
         self.conversation_id = None
         self.parent_id = str(uuid.uuid4())
 
-    def moderation(self) -> None:
+    def _moderation(self) -> None:
         '''
         Fake moderation request
         '''
+        self._get_cf_cookies()
+
         resp = self.session.post(
             'https://chat.openai.com/backend-api/moderations',
             json={'input': 'Hello', 'model': 'text-moderation-playground'},
@@ -134,7 +256,7 @@ class ChatGPT:
         - parent_id: The parent message ID
         '''
         self.refresh_auth()
-        self.moderation()
+        self._moderation()
         resp = self.session.post(
             'https://chat.openai.com/backend-api/conversation',
             json={

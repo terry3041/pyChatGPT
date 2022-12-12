@@ -8,7 +8,7 @@ An unofficial Python wrapper for OpenAI's ChatGPT API
 
 ## Getting Started
 
-> On 2022/12/11, OpenAI has implemented Cloudflare's anti-bot protection on the ChatGPT API. This wrapper is now using `undetected_chromedriver` to bypass the protection. **Please make sure you have [Google Chrome](https://www.google.com/chrome/) before using this wrapper.** Authorization using login credentials is removed due to the consistent captcha requirement on the login page.
+> On 2022/12/11, OpenAI has implemented Cloudflare's anti-bot protection on the ChatGPT API. This wrapper is now using `undetected_chromedriver` to bypass the protection. **Please make sure you have [Google Chrome](https://www.google.com/chrome/) before using this wrapper.**
 
 ### Installation
 
@@ -39,13 +39,15 @@ from pyChatGPT import ChatGPT
 
 session_token = 'abc123'  # `__Secure-next-auth.session-token` cookie from https://chat.openai.com/chat
 api = ChatGPT(session_token)  # auth with session token
-api2 = ChatGPT(session_token, conversation_id='some-random-uuid', parent_id='another-random-uuid')  # specify a conversation
-api3 = ChatGPT(session_token, proxy='http://proxy.example.com:8080')  # specify proxy
+api2 = ChatGPT(email='example@domain.com', password='password')  # auth with email and password
+api3 = ChatGPT(session_token, conversation_id='some-random-uuid', parent_id='another-random-uuid')  # specify a conversation
+api4 = ChatGPT(session_token, proxy='http://proxy.example.com:8080')  # specify proxy
+api5 = ChatGPT(session_token, cf_refresh_interval=30)  # specify the interval to refresh the cf cookies (in minutes)
 
 resp = api.send_message('Hello, world!')
 print(resp['message'])
 
-api.refresh_auth()  # refresh the authorization token & cf cookies
+api.refresh_auth()  # refresh the authorization token (should be done automatically when calling `send_message()`)
 api.reset_conversation()  # reset the conversation
 ```
 
@@ -55,6 +57,7 @@ This project is inspired by
 
 -   [ChatGPT](https://github.com/acheong08/ChatGPT)
 -   [chatgpt-api](https://github.com/transitive-bullshit/chatgpt-api)
+-   [PyChatGPT](https://github.com/rawandahmad698/PyChatGPT)
 
 ## Disclaimer
 
