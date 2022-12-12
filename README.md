@@ -15,12 +15,12 @@ An unofficial Python wrapper for OpenAI's ChatGPT API
 
 ## Getting Started
 
-> On 2022/12/11, OpenAI has implemented Cloudflare's anti-bot protection on the ChatGPT API. This wrapper is now using `undetected_chromedriver` to bypass the protection. **Please make sure you have [Google Chrome](https://www.google.com/chrome/) before using this wrapper.**
+> On 2022/12/11, OpenAI has implemented Cloudflare's anti-bot protection on the ChatGPT API. This wrapper is now using `undetected_chromedriver` to bypass the protection. **Please make sure you have [Google Chrome](https://www.google.com/chrome/) before using this wrapper.** Existing users needs to update to the latest version of this library to make it work.
 
 ### Installation
 
 ```bash
-pip install pyChatGPT
+pip install -U pyChatGPT
 ```
 
 ### Usage
