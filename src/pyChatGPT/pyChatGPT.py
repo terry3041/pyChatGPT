@@ -50,41 +50,39 @@ class ChatGPT:
         self.session.proxies = self.proxies
 
         self.session_token = session_token
-        self.refresh_cookies()
-
-    def refresh_cookies(self) -> None:
-        '''
-        Refresh the session cookies
-        '''
         options = uc.ChromeOptions()
+
         if self.proxy:
             options.add_argument(f'--proxy-server={self.proxy}')
         self.driver = uc.Chrome(options=options)
+        self.refresh_auth(init=True)
 
-        self.driver.get('https://chat.openai.com/')
-        self.headers['user-agent'] = self.driver.execute_script(
-            'return navigator.userAgent'
-        )
-        self.driver.add_cookie(
-            {'name': '__Secure-next-auth.session-token', 'value': self.session_token}
-        )
+    def refresh_auth(self, init: bool = False) -> None:
+        '''
+        Refresh the session's authorization
+        Parameters:
+        - init: (optional) Whether to initialize the session
+        '''
+        if init:
+            self.driver.get('https://chat.openai.com/api/auth/session')
+            self.headers['user-agent'] = self.driver.execute_script(
+                'return navigator.userAgent'
+            )
+            self.driver.add_cookie(
+                {
+                    'name': '__Secure-next-auth.session-token',
+                    'value': self.session_token,
+                }
+            )
+
+        self.driver.get('https://chat.openai.com/api/auth/session')
         WebDriverWait(self.driver, 10).until(
-            EC.text_to_be_present_in_element((By.TAG_NAME, 'h1'), 'ChatGPT')
+            EC.presence_of_element_located((By.TAG_NAME, 'pre'))
         )
         for cookie in self.driver.get_cookies():
             self.session.cookies.set(cookie['name'], cookie['value'])
-        self.driver.close()
-        self.driver.quit()
-
-    def refresh_auth(self) -> None:
-        '''
-        Refresh the session's authorization
-        '''
-        resp = self.session.get('https://chat.openai.com/api/auth/session')
-        if resp.status_code != 200:
-            raise ValueError(f'Status code {resp.status_code}: {resp.text}')
-
-        data = resp.json()
+        resp = self.driver.find_element(By.TAG_NAME, 'pre').text
+        data = json.loads(resp)
         if not data:
             raise ValueError('Invalid session token')
         access_token = data['accessToken']

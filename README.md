@@ -45,8 +45,7 @@ api3 = ChatGPT(session_token, proxy='http://proxy.example.com:8080')  # specify 
 resp = api.send_message('Hello, world!')
 print(resp['message'])
 
-api.refresh_cookies()  # refresh the cookies (if cloudflare bypass is not working
-api.refresh_auth()  # refresh the authorization token
+api.refresh_auth()  # refresh the authorization token & cf cookies
 api.reset_conversation()  # reset the conversation
 ```
 
