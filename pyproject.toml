@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyChatGPT"
-version = "0.1.2"
+version = "0.2.0"
 authors = [
     { name="terry3041", email="s71czbem@duck.com" },
 ]
@@ -17,6 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    'undetected-chromedriver >= 3.1.7',
     'requests',
     'uuid',
 ]
