@@ -51,6 +51,8 @@ class ChatGPT:
             self.parent_id = str(uuid.uuid4())
 
         self.proxy = proxy
+        if not re.findall(r'https?:\/\/.+:\d{1,5}', self.proxy):
+            raise ValueError('Invalid proxy format')
         self.cookies = []
         self.headers = {
             'accept': '*/*',
