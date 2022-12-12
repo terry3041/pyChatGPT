@@ -59,7 +59,7 @@ class ChatGPT:
 
     def refresh_auth(self, init: bool = False) -> None:
         '''
-        Refresh the session's authorization
+        Refresh the session's authorization & cookies\n
         Parameters:
         - init: (optional) Whether to initialize the session
         '''
