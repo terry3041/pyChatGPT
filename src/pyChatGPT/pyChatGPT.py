@@ -59,7 +59,7 @@ class ChatGPT:
         self.session.proxies = {'http': proxy, 'https': proxy} if self.proxy else {}
         self.session.mount('https://chat.openai.com', HTTPAdapter(max_retries=5))
 
-        self._last_cf = None
+        self.__last_cf = None
         self.cf_refresh_interval = cf_refresh_interval
         self.session_token = session_token
         if not self.session_token:
@@ -67,17 +67,17 @@ class ChatGPT:
                 raise ValueError(
                     'Either session_token or email and password must be provided'
                 )
-            self.session_token = self._login(email, password)
+            self.session_token = self.__login(email, password)
 
         self.session.cookies.set('__Secure-next-auth.session-token', self.session_token)
-        self.refresh_auth()
+        self.__refresh_auth()
 
-    def _get_cf_cookies(self) -> None:
+    def __get_cf_cookies(self) -> None:
         '''
         Get the Cloudflare cookies & user-agent
         '''
         # Don't refresh the cf cookies if they are less than 30 minutes old
-        if self._last_cf and datetime.now() - self._last_cf < timedelta(
+        if self.__last_cf and datetime.now() - self.__last_cf < timedelta(
             minutes=self.cf_refresh_interval
         ):
             return
@@ -129,12 +129,12 @@ class ChatGPT:
         ]
         for cookie in self.cookies:
             self.session.cookies.set(cookie['name'], cookie['value'])
-        self._last_cf = datetime.now()
+        self.__last_cf = datetime.now()
 
         # Close the browser
         self.driver.quit()
 
-    def _login(self, email: str, password: str) -> str:
+    def __login(self, email: str, password: str) -> str:
         '''
         Login to OpenAI\n
         Parameters:
@@ -142,7 +142,7 @@ class ChatGPT:
         - password: Your OpenAI password\n
         Returns the session token
         '''
-        self._get_cf_cookies()
+        self.__get_cf_cookies()
 
         # Get the CSRF token
         resp = self.session.get('https://chat.openai.com/api/auth/csrf')
@@ -206,11 +206,11 @@ class ChatGPT:
             raise ValueError(f'Could not get session token: {cookies}')
         return cookies['__Secure-next-auth.session-token']
 
-    def refresh_auth(self) -> None:
+    def __refresh_auth(self) -> None:
         '''
         Refresh the session's authorization
         '''
-        self._get_cf_cookies()
+        self.__get_cf_cookies()
 
         resp = self.session.get('https://chat.openai.com/api/auth/session')
         if resp.status_code != 200:
@@ -222,18 +222,11 @@ class ChatGPT:
         access_token = data['accessToken']
         self.headers['authorization'] = f'Bearer {access_token}'
 
-    def reset_conversation(self) -> None:
+    def __moderation(self) -> None:
         '''
-        Reset the conversation
+        Send a fake moderation request
         '''
-        self.conversation_id = None
-        self.parent_id = str(uuid.uuid4())
-
-    def _moderation(self) -> None:
-        '''
-        Fake moderation request
-        '''
-        self._get_cf_cookies()
+        self.__get_cf_cookies()
 
         resp = self.session.post(
             'https://chat.openai.com/backend-api/moderations',
@@ -255,8 +248,8 @@ class ChatGPT:
         - conversation_id: The conversation ID
         - parent_id: The parent message ID
         '''
-        self.refresh_auth()
-        self._moderation()
+        self.__refresh_auth()
+        self.__moderation()
         resp = self.session.post(
             'https://chat.openai.com/backend-api/conversation',
             json={
@@ -286,3 +279,10 @@ class ChatGPT:
             'conversation_id': self.conversation_id,
             'parent_id': self.parent_id,
         }
+
+    def reset_conversation(self) -> None:
+        '''
+        Reset the conversation
+        '''
+        self.conversation_id = None
+        self.parent_id = str(uuid.uuid4())

@@ -47,7 +47,6 @@ api5 = ChatGPT(session_token, cf_refresh_interval=30)  # specify the interval to
 resp = api.send_message('Hello, world!')
 print(resp['message'])
 
-api.refresh_auth()  # refresh the authorization token (should be done automatically when calling `send_message()`)
 api.reset_conversation()  # reset the conversation
 ```
 

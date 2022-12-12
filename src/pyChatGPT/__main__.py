@@ -34,7 +34,7 @@ if __name__ == '__main__':
             )
             continue
         if prompt.lower() == 'reauth':
-            chat.refresh_auth()
+            chat.__refresh_auth()
             print('Reauthenticated.')
             continue
         print('\nChatGPT: ', end='')
