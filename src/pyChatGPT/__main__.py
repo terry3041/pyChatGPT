@@ -26,6 +26,6 @@ if __name__ == '__main__':
             chat.refresh_auth()
             print('Reauthenticated.')
             continue
-        print('\nChatGPT:', end=' ')
+        print('\nChatGPT: ', end='')
         response = chat.send_message(prompt)
         print(response['message'])

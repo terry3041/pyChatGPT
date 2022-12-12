@@ -1,6 +1,7 @@
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException
 
 import undetected_chromedriver as uc
 import requests
@@ -54,7 +55,12 @@ class ChatGPT:
 
         if self.proxy:
             options.add_argument(f'--proxy-server={self.proxy}')
-        self.driver = uc.Chrome(options=options)
+        try:
+            self.driver = uc.Chrome(options=options)
+        except TypeError as e:
+            if str(e) == 'expected str, bytes or os.PathLike object, not NoneType':
+                raise ValueError('Chrome is not installed or is not in PATH')
+            raise e
         self.refresh_auth(init=True)
 
     def refresh_auth(self, init: bool = False) -> None:
@@ -64,21 +70,29 @@ class ChatGPT:
         - init: (optional) Whether to initialize the session
         '''
         if init:
-            self.driver.get('https://chat.openai.com/api/auth/session')
             self.headers['user-agent'] = self.driver.execute_script(
                 'return navigator.userAgent'
             )
-            self.driver.add_cookie(
+            self.driver.execute_cdp_cmd(
+                'Network.setCookie',
                 {
+                    'domain': 'chat.openai.com',
+                    'path': '/',
                     'name': '__Secure-next-auth.session-token',
                     'value': self.session_token,
-                }
+                    'httpOnly': True,
+                    'secure': True,
+                },
             )
 
         self.driver.get('https://chat.openai.com/api/auth/session')
-        WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.TAG_NAME, 'pre'))
-        )
+        try:
+            WebDriverWait(self.driver, 15).until(
+                EC.presence_of_element_located((By.TAG_NAME, 'pre'))
+            )
+        except TimeoutException:
+            raise ValueError(f'Cloudflare challenge failed: {self.driver.page_source}')
+
         for cookie in self.driver.get_cookies():
             self.session.cookies.set(cookie['name'], cookie['value'])
         resp = self.driver.find_element(By.TAG_NAME, 'pre').text
