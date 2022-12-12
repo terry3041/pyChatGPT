@@ -59,7 +59,7 @@ class ChatGPT:
         self.session.proxies = {'http': proxy, 'https': proxy} if self.proxy else {}
         self.session.mount('https://chat.openai.com', HTTPAdapter(max_retries=5))
 
-        self.__last_cf = None
+        self.last_cf = None
         self.cf_refresh_interval = cf_refresh_interval
         self.session_token = session_token
         if not self.session_token:
@@ -77,7 +77,7 @@ class ChatGPT:
         Get the Cloudflare cookies & user-agent
         '''
         # Don't refresh the cf cookies if they are less than 30 minutes old
-        if self.__last_cf and datetime.now() - self.__last_cf < timedelta(
+        if self.last_cf and datetime.now() - self.last_cf < timedelta(
             minutes=self.cf_refresh_interval
         ):
             return
@@ -129,7 +129,7 @@ class ChatGPT:
         ]
         for cookie in self.cookies:
             self.session.cookies.set(cookie['name'], cookie['value'])
-        self.__last_cf = datetime.now()
+        self.last_cf = datetime.now()
 
         # Close the browser
         self.driver.quit()
