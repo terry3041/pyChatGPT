@@ -8,6 +8,7 @@ import undetected_chromedriver as uc
 from pyvirtualdisplay import Display
 import markdownify
 import platform
+import json
 import os
 import re
 
@@ -130,6 +131,12 @@ class ChatGPT:
                         self.driver.minimize_window()
                     return self.__ensure_cf(retry + 1)
             raise ValueError(f'Cloudflare challenge failed: {resp_text}')
+
+        # Validate the authorization
+        resp = self.driver.find_element(By.TAG_NAME, 'pre').text
+        data = json.loads(resp)
+        if not data:
+            raise ValueError('Invalid session token')
 
         # Close the tab
         self.driver.close()
