@@ -52,6 +52,7 @@ resp = api1.send_message('Hello, world!')
 print(resp['message'])
 
 api1.reset_conversation()  # reset the conversation
+api1.close()  # close the session
 ```
 
 ## Frequently Asked Questions

@@ -7,8 +7,9 @@ import undetected_chromedriver as uc
 
 from pyvirtualdisplay import Display
 import markdownify
-import re
+import platform
 import os
+import re
 
 
 class ChatGPT:
@@ -33,8 +34,17 @@ class ChatGPT:
             raise ValueError('Invalid proxy format')
 
         self.session_token = session_token
-        self.is_headless = os.name == 'posix' and 'DISPLAY' not in os.environ
+        self.is_headless = platform.system() == 'Linux' and 'DISPLAY' not in os.environ
         self.__init_browser()
+
+    def close(self) -> None:
+        '''
+        Close the browser and stop the virtual display (if any)
+        '''
+        if hasattr(self, 'driver'):
+            self.driver.quit()
+        if hasattr(self, 'display'):
+            self.display.stop()
 
     def __init_browser(self) -> None:
         '''
