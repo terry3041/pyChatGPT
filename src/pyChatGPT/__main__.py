@@ -8,17 +8,9 @@ def clear_screen():
 
 if __name__ == '__main__':
     while True:
-        authMethod = input('Please enter your auth method (token / email): ')
-        if authMethod.lower() == 'token':
-            session_token = input('Please enter your session token: ')
-            chat = ChatGPT(session_token)
-            break
-        elif authMethod.lower() == 'email':
-            email = input('Please enter your email: ')
-            password = input('Please enter your password: ')
-            chat = ChatGPT(email=email, password=password)
-            break
-        clear_screen()
+        session_token = input('Please enter your session token: ')
+        chat = ChatGPT(session_token)
+        break
 
     clear_screen()
     print(

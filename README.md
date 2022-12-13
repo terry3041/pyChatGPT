@@ -66,6 +66,21 @@ sudo apt install chromium-browser xvfb
 python3 your_script.py
 ```
 
+## How do I get it to work on Google Colab?
+
+```python
+# install dependencies
+!apt install chromium-browser xvfb
+!pip install -U selenium_profiles pyChatGPT
+
+# install chromedriver
+from selenium_profiles.utils.installer import install_chromedriver
+install_chromedriver()
+
+# start your script
+!python3 -m pyChatGPT
+```
+
 ## Insipration
 
 This project is inspired by
