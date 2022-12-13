@@ -9,13 +9,13 @@ An unofficial Python wrapper for OpenAI's ChatGPT API
 ## Features
 
 -   [x] Bypass Cloudflare's anti-bot protection using `undetected_chromedriver`
--   [x] Captcha solver when auth with login credentials (experimental)
+-   [x] ~~Captcha solver when auth with login credentials (experimental)~~
 -   [x] [Support headless machines](#how-do-i-get-it-to-work-on-headless-linux-server)
 -   [x] Proxy support (only without basic auth)
 
 ## Getting Started
 
-> On 2022/12/11, OpenAI has implemented Cloudflare's anti-bot protection on the ChatGPT API. This wrapper is now using `undetected_chromedriver` to bypass the protection. **Please make sure you have [Google Chrome](https://www.google.com/chrome/) before using this wrapper.** Existing users needs to update to the latest version of this library to make it work.
+> On version 0.3.0, this library is using only the `undetected_chromedriver` to bypass Cloudflare's anti-bot protection. `requests` module is no longer used due to the complexity of the protection. **Please make sure you have [Google Chrome](https://www.google.com/chrome/) before using this wrapper.** From now on, this library will not support specifying a conversation (i.e. `parent_id` and `conversation_id` parameters) but you can still reset the conversation by calling `reset_conversation()`.
 
 ### Installation
 

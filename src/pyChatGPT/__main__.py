@@ -33,10 +33,6 @@ if __name__ == '__main__':
                 'Conversation started. Type "reset" to reset the conversation. Type "reauth" to reauthenticate.'
             )
             continue
-        if prompt.lower() == 'reauth':
-            chat.__refresh_auth()
-            print('Reauthenticated.')
-            continue
         print('\nChatGPT: ', end='')
         response = chat.send_message(prompt)
         print(response['message'])
