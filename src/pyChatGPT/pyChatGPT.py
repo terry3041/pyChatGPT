@@ -33,6 +33,7 @@ class ChatGPT:
             raise ValueError('Invalid proxy format')
 
         self.session_token = session_token
+        self.is_headless = os.name == 'posix' and 'DISPLAY' not in os.environ
         self.__init_browser()
 
     def __init_browser(self) -> None:
@@ -40,8 +41,7 @@ class ChatGPT:
         Get the Cloudflare cookies & user-agent
         '''
         # Detect if running on a headless server
-        is_headless = os.name == 'posix' and 'DISPLAY' not in os.environ
-        if is_headless:
+        if self.is_headless:
             try:
                 self.display = Display()
             except FileNotFoundError as e:
@@ -101,7 +101,8 @@ class ChatGPT:
         # Open a new tab
         original_window = self.driver.current_window_handle
         self.driver.switch_to.new_window('tab')
-        self.driver.minimize_window()
+        if not self.is_headless:
+            self.driver.minimize_window()
 
         # Get the Cloudflare challenge
         self.driver.get('https://chat.openai.com/api/auth/session')
@@ -116,14 +117,16 @@ class ChatGPT:
                 if retry <= 2:
                     self.driver.close()
                     self.driver.switch_to.window(original_window)
-                    self.driver.minimize_window()
+                    if not self.is_headless:
+                        self.driver.minimize_window()
                     return self.__ensure_cf(retry + 1)
             raise ValueError(f'Cloudflare challenge failed: {resp_text}')
 
         # Close the tab
         self.driver.close()
         self.driver.switch_to.window(original_window)
-        self.driver.minimize_window()
+        if not self.is_headless:
+            self.driver.minimize_window()
 
     def send_message(self, message: str) -> dict:
         '''
