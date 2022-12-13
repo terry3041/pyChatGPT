@@ -14,15 +14,15 @@ if __name__ == '__main__':
 
     clear_screen()
     print(
-        'Conversation started. Type "reset" to reset the conversation. Type "quit" to quit.'
+        'Conversation started. Type "reset" to reset the conversation. Type "quit" to quit.\n'
     )
     while True:
-        prompt = input('\nYou: ')
+        prompt = input('You: ')
         if prompt.lower() == 'reset':
             chat.reset_conversation()
             clear_screen()
             print(
-                'Conversation started. Type "reset" to reset the conversation. Type "quit" to quit.'
+                'Conversation started. Type "reset" to reset the conversation. Type "quit" to quit.\n'
             )
             continue
         if prompt.lower() == 'quit':
@@ -30,4 +30,4 @@ if __name__ == '__main__':
             break
         print('\nChatGPT: ', end='')
         response = chat.send_message(prompt)
-        print(response['message'])
+        print(response['message'], end='')

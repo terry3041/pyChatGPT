@@ -48,7 +48,7 @@ class ChatGPT:
 
     def __init_browser(self) -> None:
         '''
-        Get the Cloudflare cookies & user-agent
+        Initialize the browser
         '''
         # Detect if running on a headless server
         if self.is_headless:
