@@ -122,7 +122,6 @@ class ChatGPT:
             )
         except SeleniumExceptions.TimeoutException:
             resp_text = self.driver.page_source
-            self.driver.quit()
             if '<title>Just a moment...</title>' in resp_text:
                 if retry <= 2:
                     self.driver.close()
