@@ -66,7 +66,7 @@ sudo apt install chromium-browser xvfb
 python3 your_script.py
 ```
 
-## How do I get it to work on Google Colab?
+### How do I get it to work on Google Colab?
 
 ```python
 # install dependencies
