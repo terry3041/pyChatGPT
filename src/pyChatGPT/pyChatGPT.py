@@ -42,7 +42,9 @@ class ChatGPT:
         self.verbose = verbose
 
         self.proxy = proxy
-        if self.proxy and not re.findall(r'https?:\/\/.*:\d{1,5}', self.proxy):
+        if self.proxy and not re.findall(
+            r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.proxy
+        ):
             raise ValueError('Invalid proxy format')
 
         self.__email = email
