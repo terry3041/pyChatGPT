@@ -49,6 +49,7 @@ session_token = 'abc123'  # `__Secure-next-auth.session-token` cookie from https
 api1 = ChatGPT(session_token)  # auth with session token
 api2 = ChatGPT(session_token, proxy='http://proxy.example.com:8080')  # specify proxy
 api3 = ChatGPT(auth_type='google', email='example@gmail.com', password='password') # auth with google login
+api4 = ChatGPT(session_token, verbose=True)  # verbose mode (print debug messages)
 
 resp = api1.send_message('Hello, world!')
 print(resp['message'])
