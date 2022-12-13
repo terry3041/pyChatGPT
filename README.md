@@ -12,6 +12,7 @@ An unofficial Python wrapper for OpenAI's ChatGPT API
 -   [x] ~~Captcha solver when auth with login credentials (experimental)~~
 -   [x] [Support headless machines](#how-do-i-get-it-to-work-on-headless-linux-server)
 -   [x] Proxy support (only without basic auth)
+-   [x] Google login support (experimental)
 
 ## Getting Started
 
@@ -47,6 +48,7 @@ from pyChatGPT import ChatGPT
 session_token = 'abc123'  # `__Secure-next-auth.session-token` cookie from https://chat.openai.com/chat
 api1 = ChatGPT(session_token)  # auth with session token
 api2 = ChatGPT(session_token, proxy='http://proxy.example.com:8080')  # specify proxy
+api3 = ChatGPT(auth_type='google', email='example@gmail.com', password='password') # auth with google login
 
 resp = api1.send_message('Hello, world!')
 print(resp['message'])

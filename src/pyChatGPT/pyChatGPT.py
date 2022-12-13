@@ -8,6 +8,7 @@ import undetected_chromedriver as uc
 from pyvirtualdisplay import Display
 import markdownify
 import platform
+import time
 import json
 import os
 import re
@@ -20,21 +21,38 @@ class ChatGPT:
 
     def __init__(
         self,
-        session_token: str,
+        session_token: str = None,
+        email: str = None,
+        password: str = None,
+        auth_type: str = None,
         proxy: str = None,
     ) -> None:
         '''
         Initialize the ChatGPT class\n
         Either provide a session token or email and password\n
         Parameters:
-        - session_token: Your session token in cookies named as `__Secure-next-auth.session-token` from https://chat.openai.com/chat
+        - session_token: (optional) Your session token in cookies named as `__Secure-next-auth.session-token` from https://chat.openai.com/chat
+        - email: (optional) Your email
+        - password: (optional) Your password
+        - auth_type: The type of authentication to use. Can only be `google` at the moment
         - proxy: (optional) The proxy to use, in URL format (i.e. `https://ip:port`)
         '''
         self.proxy = proxy
         if self.proxy and not re.findall(r'https?:\/\/.*:\d{1,5}', self.proxy):
             raise ValueError('Invalid proxy format')
 
-        self.session_token = session_token
+        self.__email = email
+        self.__password = password
+        self.__auth_type = auth_type
+        if self.__auth_type not in [None, 'google', 'windowslive']:
+            raise ValueError('Invalid authentication type')
+        self.__session_token = session_token
+        if not self.__session_token:
+            if not self.__email or not self.__password or not self.__auth_type:
+                raise ValueError(
+                    'Please provide either a session token or login credentials'
+                )
+
         self.is_headless = platform.system() == 'Linux' and 'DISPLAY' not in os.environ
         self.__init_browser()
 
@@ -70,23 +88,26 @@ class ChatGPT:
             options.add_argument(f'--proxy-server={self.proxy}')
         try:
             self.driver = uc.Chrome(options=options, enable_cdp_events=True)
+            # if not self.is_headless:
+            #     self.driver.minimize_window()
         except TypeError as e:
             if str(e) == 'expected str, bytes or os.PathLike object, not NoneType':
                 raise ValueError('Chrome installation not found')
             raise e
 
         # Restore session token
-        self.driver.execute_cdp_cmd(
-            'Network.setCookie',
-            {
-                'domain': 'chat.openai.com',
-                'path': '/',
-                'name': '__Secure-next-auth.session-token',
-                'value': self.session_token,
-                'httpOnly': True,
-                'secure': True,
-            },
-        )
+        if not self.__auth_type:
+            self.driver.execute_cdp_cmd(
+                'Network.setCookie',
+                {
+                    'domain': 'chat.openai.com',
+                    'path': '/',
+                    'name': '__Secure-next-auth.session-token',
+                    'value': self.__session_token,
+                    'httpOnly': True,
+                    'secure': True,
+                },
+            )
 
         # Ensure that the Cloudflare challenge is still valid
         self.__ensure_cf()
@@ -102,6 +123,96 @@ class ChatGPT:
             element.parentNode.removeChild(element);
         """
         )
+
+    def __login(self) -> None:
+        # Get the login page
+        original_window = self.driver.current_window_handle
+        self.driver.switch_to.new_window('tab')
+
+        self.driver.get('https://chat.openai.com/auth/login')
+        while True:
+            try:
+                WebDriverWait(self.driver, 3).until(
+                    EC.element_to_be_clickable(
+                        (By.XPATH, '//div[text()="ChatGPT is at capacity right now"]')
+                    )
+                )
+                self.driver.get('https://chat.openai.com/auth/login')
+            except SeleniumExceptions.TimeoutException:
+                break
+
+        # Click Log in button
+        WebDriverWait(self.driver, 3).until(
+            EC.element_to_be_clickable((By.XPATH, '//div[text()="Welcome to ChatGPT"]'))
+        )
+        self.driver.find_element(By.XPATH, '//button[text()="Log in"]').click()
+
+        # click button with data-provider="google"
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, '//h1[text()="Welcome back"]'))
+        )
+        self.driver.find_element(
+            By.XPATH, f'//button[@data-provider="{self.__auth_type}"]'
+        ).click()
+
+        if self.__auth_type == 'google':
+            # Enter email
+            try:
+                WebDriverWait(self.driver, 3).until(
+                    EC.element_to_be_clickable(
+                        (By.XPATH, f'//div[@data-identifier="{self.__email}"]')
+                    )
+                )
+                self.driver.find_element(
+                    By.XPATH, f'//div[@data-identifier="{self.__email}"]'
+                ).click()
+            except SeleniumExceptions.TimeoutException:
+                WebDriverWait(self.driver, 5).until(
+                    EC.element_to_be_clickable((By.XPATH, '//input[@type="email"]'))
+                )
+                self.driver.find_element(By.XPATH, '//input[@type="email"]').send_keys(
+                    self.__email
+                )
+                self.driver.find_element(By.XPATH, '//*[@id="identifierNext"]').click()
+
+                # Enter password
+                WebDriverWait(self.driver, 5).until(
+                    EC.element_to_be_clickable((By.XPATH, '//input[@type="password"]'))
+                )
+                self.driver.find_element(
+                    By.XPATH, '//input[@type="password"]'
+                ).send_keys(self.__password)
+                self.driver.find_element(By.XPATH, '//*[@id="passwordNext"]').click()
+
+            # wait verification code
+            try:
+                WebDriverWait(self.driver, 5).until(
+                    EC.presence_of_element_located((By.TAG_NAME, 'samp'))
+                )
+                prev_code = self.driver.find_elements(By.TAG_NAME, 'samp')[0].text
+                print('Verification code:', prev_code)
+                while True:
+                    code = self.driver.find_elements(By.TAG_NAME, 'samp')
+                    if not code:
+                        break
+                    if code[0].text != prev_code:
+                        print('Verification code:', code[0].text)
+                        prev_code = code[0].text
+                    time.sleep(1)
+            except SeleniumExceptions.TimeoutException:
+                pass
+
+        # Check if logged in correctly
+        try:
+            WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, '//h1[text()="ChatGPT"]'))
+            )
+        except SeleniumExceptions.TimeoutException:
+            raise ValueError('Login failed')
+
+        # Close the tab
+        self.driver.close()
+        self.driver.switch_to.window(original_window)
 
     def __ensure_cf(self, retry: int = 0) -> None:
         '''
@@ -136,7 +247,9 @@ class ChatGPT:
         resp = self.driver.find_element(By.TAG_NAME, 'pre').text
         data = json.loads(resp)
         if not data:
-            raise ValueError('Invalid session token')
+            if not self.__auth_type:
+                raise ValueError('Invalid session token')
+            self.__login()
 
         # Close the tab
         self.driver.close()
