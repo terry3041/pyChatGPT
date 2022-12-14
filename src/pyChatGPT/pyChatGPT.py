@@ -332,9 +332,13 @@ class ChatGPT:
 
         # Send the message
         self.__verbose_print('Sending message')
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.TAG_NAME, 'textarea'))
+        )
         textbox = self.driver.find_element(By.TAG_NAME, 'textarea')
 
         # Sending emoji (from https://stackoverflow.com/a/61043442)
+        textbox.click()
         self.driver.execute_script(
             """
         var element = arguments[0], txt = arguments[1];
@@ -354,20 +358,20 @@ class ChatGPT:
 
         # Get the response element
         self.__verbose_print('Finding response element')
-        request = self.driver.find_elements(
+        response = self.driver.find_elements(
             By.XPATH, "//div[starts-with(@class, 'request-:')]"
         )[-1]
 
         # Check if the response is an error
         self.__verbose_print('Checking if response is an error')
-        if 'text-red' in request.get_attribute('class'):
+        if 'text-red' in response.get_attribute('class'):
             self.__verbose_print('Response is an error')
-            raise ValueError(request.text)
+            raise ValueError(response.text)
         self.__verbose_print('Response is not an error')
 
         # Return the response
         return {
-            'message': markdownify.markdownify(request.get_attribute('innerHTML')),
+            'message': markdownify.markdownify(response.get_attribute('innerHTML')),
             'conversation_id': '',
             'parent_id': '',
         }
