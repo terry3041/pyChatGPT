@@ -294,7 +294,14 @@ class ChatGPT:
         # Validate the authorization
         resp = self.driver.find_element(By.TAG_NAME, 'pre').text
         data = json.loads(resp)
-        if not data:
+        if data and 'error' in data:
+            self.__verbose_print(data['error'])
+            if data['error'] == 'RefreshAccessTokenError':
+                if not self.__auth_type:
+                    raise ValueError('Session token expired')
+                self.__login()
+            raise ValueError(f'Authorization error: {data["error"]}')
+        elif not data:
             self.__verbose_print('Authorization is empty')
             if not self.__auth_type:
                 raise ValueError('Invalid session token')
@@ -334,16 +341,18 @@ class ChatGPT:
             textbox,
             message,
         )
-        self.driver.find_element(By.TAG_NAME, 'textarea').send_keys(Keys.ENTER)
+        textbox.send_keys(Keys.ENTER)
 
         # Get the response element
         self.__verbose_print('Finding response element')
+        time.sleep(0.25)
         request = self.driver.find_elements(
             By.XPATH, "//div[starts-with(@class, 'request-:')]"
         )[-1]
 
         # Wait for the response to be ready
         self.__verbose_print('Waiting for completion')
+        time.sleep(0.25)
         WebDriverWait(self.driver, 90).until_not(
             EC.presence_of_element_located((By.CLASS_NAME, 'result-streaming'))
         )
