@@ -274,25 +274,25 @@ class ChatGPT:
         self.__verbose_print('Getting authorization')
         self.driver.get('https://chat.openai.com/api/auth/session')
         try:
-            WebDriverWait(self.driver, 15).until(
-                EC.presence_of_element_located((By.TAG_NAME, 'pre'))
-            )
+            WebDriverWait(self.driver, 15).until_not(EC.title_is('Just a moment...'))
         except SeleniumExceptions.TimeoutException:
             self.driver.save_screenshot(f'cf_failed_{retry}.png')
-            resp_text = self.driver.page_source
-            if '<title>Just a moment...</title>' in resp_text:
-                if retry <= 2:
-                    self.__verbose_print(
-                        f'Cloudflare challenge failed, retrying {retry + 1}'
-                    )
-                    self.__verbose_print('Closing tab')
-                    self.driver.close()
-                    self.driver.switch_to.window(original_window)
-                    return self.__ensure_cf(retry + 1)
-            raise ValueError(f'Cloudflare challenge failed: {resp_text}')
+            if retry <= 2:
+                self.__verbose_print(
+                    f'Cloudflare challenge failed, retrying {retry + 1}'
+                )
+                self.__verbose_print('Closing tab')
+                self.driver.close()
+                self.driver.switch_to.window(original_window)
+                return self.__ensure_cf(retry + 1)
+            else:
+                resp_text = self.driver.page_source
+                raise ValueError(f'Cloudflare challenge failed: {resp_text}')
 
         # Validate the authorization
-        resp = self.driver.find_element(By.TAG_NAME, 'pre').text
+        resp = self.driver.page_source
+        if resp[0] != '{':  # its probably not a json
+            resp = self.driver.find_element(By.TAG_NAME, 'pre').text
         data = json.loads(resp)
         if data and 'error' in data:
             self.__verbose_print(data['error'])
