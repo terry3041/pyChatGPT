@@ -154,6 +154,26 @@ class ChatGPT:
             self.__verbose_print('[init] Did not found one')
             pass
 
+        # Check if there is an alert
+        self.__verbose_print('[init] Check if there is alert')
+        alerts = self.__is_high_demand()
+        if alerts:
+            self.__verbose_print('[init] Dismissing alert')
+            self.driver.execute_script(
+                """
+            var element = document.querySelector('div[role="alert"]');
+            if (element)
+                element.parentNode.removeChild(element);
+            """
+            )
+
+    def __is_high_demand(self) -> list or None:
+        '''
+        Check if there is an alert and close it
+        '''
+        alerts = self.driver.find_elements(By.XPATH, '//div[@role="alert"]')
+        return alerts
+
     def __login(self) -> None:
         '''
         Login to ChatGPT
