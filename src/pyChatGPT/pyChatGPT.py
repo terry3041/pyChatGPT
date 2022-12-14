@@ -269,8 +269,6 @@ class ChatGPT:
         self.__verbose_print('Opening new tab')
         original_window = self.driver.current_window_handle
         self.driver.switch_to.new_window('tab')
-        # if not self.__is_headless:
-        #     self.driver.minimize_window()
 
         # Get the Cloudflare challenge
         self.__verbose_print('Getting authorization')
@@ -290,8 +288,6 @@ class ChatGPT:
                     self.__verbose_print('Closing tab')
                     self.driver.close()
                     self.driver.switch_to.window(original_window)
-                    # if not self.__is_headless:
-                    #     self.driver.minimize_window()
                     return self.__ensure_cf(retry + 1)
             raise ValueError(f'Cloudflare challenge failed: {resp_text}')
 
@@ -309,8 +305,6 @@ class ChatGPT:
         self.__verbose_print('Closing tab')
         self.driver.close()
         self.driver.switch_to.window(original_window)
-        # if not self.__is_headless:
-        #     self.driver.minimize_window()
 
     def send_message(self, message: str) -> dict:
         '''
@@ -328,7 +322,18 @@ class ChatGPT:
 
         # Send the message
         self.__verbose_print('Sending message')
-        self.driver.find_element(By.TAG_NAME, 'textarea').send_keys(message)
+        textbox = self.driver.find_element(By.TAG_NAME, 'textarea')
+
+        # Sending emoji (from https://stackoverflow.com/a/61043442)
+        self.driver.execute_script(
+            """
+        var element = arguments[0], txt = arguments[1];
+        element.value += txt;
+        element.dispatchEvent(new Event('change'));
+        """,
+            textbox,
+            message,
+        )
         self.driver.find_element(By.TAG_NAME, 'textarea').send_keys(Keys.ENTER)
 
         # Get the response element
