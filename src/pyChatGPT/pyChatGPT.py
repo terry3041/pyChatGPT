@@ -39,11 +39,11 @@ class ChatGPT:
         - proxy: (optional) The proxy to use, in URL format (i.e. `https://ip:port`)
         - verbose: (optional) Whether to print debug messages
         '''
-        self.verbose = verbose
+        self.__verbose = verbose
 
-        self.proxy = proxy
-        if self.proxy and not re.findall(
-            r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.proxy
+        self.__proxy = proxy
+        if self.__proxy and not re.findall(
+            r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.__proxy
         ):
             raise ValueError('Invalid proxy format')
 
@@ -62,16 +62,16 @@ class ChatGPT:
         self.__is_headless = (
             platform.system() == 'Linux' and 'DISPLAY' not in os.environ
         )
-        self.__verbose_print('Platform:', platform.system())
-        self.__verbose_print('Display:', 'DISPLAY' in os.environ)
-        self.__verbose_print('Headless:', self.__is_headless)
+        self.__verbose_print('[0] Platform:', platform.system())
+        self.__verbose_print('[0] Display:', 'DISPLAY' in os.environ)
+        self.__verbose_print('[0] Headless:', self.__is_headless)
         self.__init_browser()
 
     def __verbose_print(self, *args, **kwargs) -> None:
         '''
         Print if verbose is enabled
         '''
-        if self.verbose:
+        if self.__verbose:
             print(*args, **kwargs)
 
     def close(self) -> None:
@@ -97,16 +97,16 @@ class ChatGPT:
                         'Headless machine detected. Please install Xvfb to start a virtual display: sudo apt install xvfb'
                     )
                 raise e
-            self.__verbose_print('Starting virtual display')
+            self.__verbose_print('[init] Starting virtual display')
             self.display.start()
 
         # Start the browser
         options = uc.ChromeOptions()
         options.add_argument('--window-size=800,600')
-        if self.proxy:
-            options.add_argument(f'--proxy-server={self.proxy}')
+        if self.__proxy:
+            options.add_argument(f'--proxy-server={self.__proxy}')
         try:
-            self.__verbose_print('Starting browser')
+            self.__verbose_print('[init] Starting browser')
             self.driver = uc.Chrome(options=options, enable_cdp_events=True)
         except TypeError as e:
             if str(e) == 'expected str, bytes or os.PathLike object, not NoneType':
@@ -115,7 +115,7 @@ class ChatGPT:
 
         # Restore session token
         if not self.__auth_type:
-            self.__verbose_print('Restoring session token')
+            self.__verbose_print('[init] Restoring session token')
             self.driver.execute_cdp_cmd(
                 'Network.setCookie',
                 {
@@ -128,51 +128,60 @@ class ChatGPT:
                 },
             )
 
-        # Ensure that the Cloudflare challenge is still valid
-        self.__verbose_print('Ensuring Cloudflare challenge')
+        # Ensure that the Cloudflare cookies is still valid
+        self.__verbose_print('[init] Ensuring Cloudflare cookies')
         self.__ensure_cf()
 
         # Open the chat page
-        self.__verbose_print('Opening chat page')
+        self.__verbose_print('[init] Opening chat page')
         self.driver.get('https://chat.openai.com/chat')
 
         # Dismiss the ChatGPT intro
-        self.__verbose_print('Dismissing intro')
-        self.driver.execute_script(
+        self.__verbose_print('[init] Check if there is intro')
+        try:
+            WebDriverWait(self.driver, 3).until(
+                EC.presence_of_element_located((By.ID, 'headlessui-portal-root'))
+            )
+            self.__verbose_print('[init] Dismissing intro')
+            self.driver.execute_script(
+                """
+            var element = document.getElementById('headlessui-portal-root');
+            if (element)
+                element.parentNode.removeChild(element);
             """
-        var element = document.getElementById('headlessui-portal-root');
-        if (element)
-            element.parentNode.removeChild(element);
-        """
-        )
+            )
+        except SeleniumExceptions.TimeoutException:
+            self.__verbose_print('[init] Did not found one')
+            pass
 
     def __login(self) -> None:
         '''
         Login to ChatGPT
         '''
         # Get the login page
-        self.__verbose_print('Opening new tab')
+        self.__verbose_print('[login] Opening new tab')
         original_window = self.driver.current_window_handle
         self.driver.switch_to.new_window('tab')
 
-        self.__verbose_print('Opening login page')
+        self.__verbose_print('[login] Opening login page')
         self.driver.get('https://chat.openai.com/auth/login')
         while True:
             try:
-                self.__verbose_print('Checking if ChatGPT is at capacity')
+                self.__verbose_print('[login] Checking if ChatGPT is at capacity')
                 WebDriverWait(self.driver, 3).until(
                     EC.presence_of_element_located(
                         (By.XPATH, '//div[text()="ChatGPT is at capacity right now"]')
                     )
                 )
-                self.__verbose_print('ChatGPT is at capacity, retrying')
+                self.__verbose_print('[login] ChatGPT is at capacity, retrying')
                 self.driver.get('https://chat.openai.com/auth/login')
             except SeleniumExceptions.TimeoutException:
+                self.__verbose_print('[login] ChatGPT is not at capacity')
                 break
 
         # Click Log in button
-        self.__verbose_print('Clicking Log in button')
-        WebDriverWait(self.driver, 3).until(
+        self.__verbose_print('[login] Clicking Log in button')
+        WebDriverWait(self.driver, 5).until(
             EC.presence_of_element_located(
                 (By.XPATH, '//div[text()="Welcome to ChatGPT"]')
             )
@@ -180,7 +189,7 @@ class ChatGPT:
         self.driver.find_element(By.XPATH, '//button[text()="Log in"]').click()
 
         # click button with data-provider="google"
-        self.__verbose_print('Clicking Google button')
+        self.__verbose_print('[login] Clicking Google button')
         WebDriverWait(self.driver, 5).until(
             EC.presence_of_element_located((By.XPATH, '//h1[text()="Welcome back"]'))
         )
@@ -191,46 +200,46 @@ class ChatGPT:
         if self.__auth_type == 'google':
             # Enter email
             try:
-                self.__verbose_print('Checking if Google remembers email')
+                self.__verbose_print('[login] Checking if Google remembers email')
                 WebDriverWait(self.driver, 3).until(
                     EC.element_to_be_clickable(
                         (By.XPATH, f'//div[@data-identifier="{self.__email}"]')
                     )
                 )
-                self.__verbose_print('Google remembers email')
+                self.__verbose_print('[login] Google remembers email')
                 self.driver.find_element(
                     By.XPATH, f'//div[@data-identifier="{self.__email}"]'
                 ).click()
             except SeleniumExceptions.TimeoutException:
-                self.__verbose_print('Google does not remember email')
-                self.__verbose_print('Entering email')
+                self.__verbose_print('[login] Google does not remember email')
+                self.__verbose_print('[login] Entering email')
                 WebDriverWait(self.driver, 5).until(
                     EC.element_to_be_clickable((By.XPATH, '//input[@type="email"]'))
                 )
                 self.driver.find_element(By.XPATH, '//input[@type="email"]').send_keys(
                     self.__email
                 )
-                self.__verbose_print('Clicking Next')
+                self.__verbose_print('[login] Clicking Next')
                 self.driver.find_element(By.XPATH, '//*[@id="identifierNext"]').click()
 
                 # Enter password
-                self.__verbose_print('Entering password')
+                self.__verbose_print('[login] Entering password')
                 WebDriverWait(self.driver, 5).until(
                     EC.element_to_be_clickable((By.XPATH, '//input[@type="password"]'))
                 )
                 self.driver.find_element(
                     By.XPATH, '//input[@type="password"]'
                 ).send_keys(self.__password)
-                self.__verbose_print('Clicking Next')
+                self.__verbose_print('[login] Clicking Next')
                 self.driver.find_element(By.XPATH, '//*[@id="passwordNext"]').click()
 
             # wait verification code
             try:
-                self.__verbose_print('Checking if verification code is required')
+                self.__verbose_print('[login] Check if verification code is required')
                 WebDriverWait(self.driver, 5).until(
                     EC.presence_of_element_located((By.TAG_NAME, 'samp'))
                 )
-                self.__verbose_print('Verification code is required')
+                self.__verbose_print('[login] code is required')
                 prev_code = self.driver.find_elements(By.TAG_NAME, 'samp')[0].text
                 print('Verification code:', prev_code)
                 while True:
@@ -242,11 +251,12 @@ class ChatGPT:
                         prev_code = code[0].text
                     time.sleep(1)
             except SeleniumExceptions.TimeoutException:
+                self.__verbose_print('[login] code is not required')
                 pass
 
         # Check if logged in correctly
         try:
-            self.__verbose_print('Checking if login was successful')
+            self.__verbose_print('[login] Checking if login was successful')
             WebDriverWait(self.driver, 5).until(
                 EC.presence_of_element_located((By.XPATH, '//h1[text()="ChatGPT"]'))
             )
@@ -255,23 +265,23 @@ class ChatGPT:
             raise ValueError('Login failed')
 
         # Close the tab
-        self.__verbose_print('Closing tab')
+        self.__verbose_print('[login] Closing tab')
         self.driver.close()
         self.driver.switch_to.window(original_window)
 
     def __ensure_cf(self, retry: int = 0) -> None:
         '''
-        Ensure that the Cloudflare challenge is still valid\n
+        Ensure that the Cloudflare cookies is still valid\n
         Parameters:
         - retry: The number of times this function has been called recursively
         '''
         # Open a new tab
-        self.__verbose_print('Opening new tab')
+        self.__verbose_print('[cf] Opening new tab')
         original_window = self.driver.current_window_handle
         self.driver.switch_to.new_window('tab')
 
         # Get the Cloudflare challenge
-        self.__verbose_print('Getting authorization')
+        self.__verbose_print('[cf] Getting authorization')
         self.driver.get('https://chat.openai.com/api/auth/session')
         try:
             WebDriverWait(self.driver, 15).until_not(
@@ -279,11 +289,11 @@ class ChatGPT:
             )
         except SeleniumExceptions.TimeoutException:
             self.driver.save_screenshot(f'cf_failed_{retry}.png')
-            if retry <= 2:
+            if retry <= 4:
                 self.__verbose_print(
-                    f'Cloudflare challenge failed, retrying {retry + 1}'
+                    f'[cf] Cloudflare challenge failed, retrying {retry + 1}'
                 )
-                self.__verbose_print('Closing tab')
+                self.__verbose_print('[cf] Closing tab')
                 self.driver.close()
                 self.driver.switch_to.window(original_window)
                 return self.__ensure_cf(retry + 1)
@@ -292,12 +302,14 @@ class ChatGPT:
                 raise ValueError(f'Cloudflare challenge failed: {resp_text}')
 
         # Validate the authorization
+        self.__verbose_print('[cf] Validating authorization')
         resp = self.driver.page_source
         if resp[0] != '{':  # its probably not a json
+            self.__verbose_print('[cf] resp is not json')
             resp = self.driver.find_element(By.TAG_NAME, 'pre').text
         data = json.loads(resp)
         if data and 'error' in data:
-            self.__verbose_print(data['error'])
+            self.__verbose_print(f'[cf] {data["error"]}')
             if data['error'] == 'RefreshAccessTokenError':
                 if not self.__auth_type:
                     raise ValueError('Session token expired')
@@ -305,14 +317,14 @@ class ChatGPT:
             else:
                 raise ValueError(f'Authorization error: {data["error"]}')
         elif not data:
-            self.__verbose_print('Authorization is empty')
+            self.__verbose_print('[cf] Authorization is empty')
             if not self.__auth_type:
                 raise ValueError('Invalid session token')
             self.__login()
-        self.__verbose_print('Authorization is valid')
+        self.__verbose_print('[cf] Authorization is valid')
 
         # Close the tab
-        self.__verbose_print('Closing tab')
+        self.__verbose_print('[cf] Closing tab')
         self.driver.close()
         self.driver.switch_to.window(original_window)
 
@@ -326,12 +338,12 @@ class ChatGPT:
         - conversation_id: The conversation ID
         - parent_id: The parent ID
         '''
-        # Ensure that the Cloudflare challenge is still valid
-        self.__verbose_print('Ensuring Cloudflare challenge')
+        # Ensure that the Cloudflare cookies is still valid
+        self.__verbose_print('[send_msg] Ensuring Cloudflare cookies')
         self.__ensure_cf()
 
         # Send the message
-        self.__verbose_print('Sending message')
+        self.__verbose_print('[send_msg] Sending message')
         WebDriverWait(self.driver, 5).until(
             EC.element_to_be_clickable((By.TAG_NAME, 'textarea'))
         )
@@ -351,23 +363,23 @@ class ChatGPT:
         textbox.send_keys(Keys.ENTER)
 
         # Wait for the response to be ready
-        self.__verbose_print('Waiting for completion')
+        self.__verbose_print('[send_msg] Waiting for completion')
         WebDriverWait(self.driver, 90).until_not(
             EC.presence_of_element_located((By.CLASS_NAME, 'result-streaming'))
         )
 
         # Get the response element
-        self.__verbose_print('Finding response element')
+        self.__verbose_print('[send_msg] Finding response element')
         response = self.driver.find_elements(
             By.XPATH, "//div[starts-with(@class, 'request-:')]"
         )[-1]
 
         # Check if the response is an error
-        self.__verbose_print('Checking if response is an error')
+        self.__verbose_print('[send_msg] Checking if response is an error')
         if 'text-red' in response.get_attribute('class'):
-            self.__verbose_print('Response is an error')
+            self.__verbose_print('[send_msg] Response is an error')
             raise ValueError(response.text)
-        self.__verbose_print('Response is not an error')
+        self.__verbose_print('[send_msg] Response is not an error')
 
         # Return the response
         return {
