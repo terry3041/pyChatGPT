@@ -302,7 +302,8 @@ class ChatGPT:
                 if not self.__auth_type:
                     raise ValueError('Session token expired')
                 self.__login()
-            raise ValueError(f'Authorization error: {data["error"]}')
+            else:
+                raise ValueError(f'Authorization error: {data["error"]}')
         elif not data:
             self.__verbose_print('Authorization is empty')
             if not self.__auth_type:
@@ -345,19 +346,17 @@ class ChatGPT:
         )
         textbox.send_keys(Keys.ENTER)
 
-        # Get the response element
-        self.__verbose_print('Finding response element')
-        time.sleep(0.25)
-        request = self.driver.find_elements(
-            By.XPATH, "//div[starts-with(@class, 'request-:')]"
-        )[-1]
-
         # Wait for the response to be ready
         self.__verbose_print('Waiting for completion')
-        time.sleep(0.25)
         WebDriverWait(self.driver, 90).until_not(
             EC.presence_of_element_located((By.CLASS_NAME, 'result-streaming'))
         )
+
+        # Get the response element
+        self.__verbose_print('Finding response element')
+        request = self.driver.find_elements(
+            By.XPATH, "//div[starts-with(@class, 'request-:')]"
+        )[-1]
 
         # Check if the response is an error
         self.__verbose_print('Checking if response is an error')
