@@ -274,7 +274,9 @@ class ChatGPT:
         self.__verbose_print('Getting authorization')
         self.driver.get('https://chat.openai.com/api/auth/session')
         try:
-            WebDriverWait(self.driver, 15).until_not(EC.title_is('Just a moment...'))
+            WebDriverWait(self.driver, 15).until_not(
+                EC.presence_of_element_located((By.ID, 'challenge-form'))
+            )
         except SeleniumExceptions.TimeoutException:
             self.driver.save_screenshot(f'cf_failed_{retry}.png')
             if retry <= 2:
