@@ -108,6 +108,7 @@ class ChatGPT:
         try:
             self.__verbose_print('[init] Starting browser')
             self.driver = uc.Chrome(options=options, enable_cdp_events=True)
+            self.driver.maximize_window()
         except TypeError as e:
             if str(e) == 'expected str, bytes or os.PathLike object, not NoneType':
                 raise ValueError('Chrome installation not found')
