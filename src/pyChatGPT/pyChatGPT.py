@@ -413,4 +413,4 @@ class ChatGPT:
         Reset the conversation
         '''
         self.__verbose_print('Resetting conversation')
-        self.driver.find_element(By.LINK_TEXT, 'New Thread').click()
+        self.driver.find_element(By.LINK_TEXT, 'New Chat').click()
