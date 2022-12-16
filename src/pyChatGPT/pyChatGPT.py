@@ -27,6 +27,7 @@ class ChatGPT:
         auth_type: str = None,
         proxy: str = None,
         verbose: bool = False,
+        window_size: tuple = (800, 600),
     ) -> None:
         '''
         Initialize the ChatGPT class\n
@@ -50,6 +51,7 @@ class ChatGPT:
         self.__email = email
         self.__password = password
         self.__auth_type = auth_type
+        self.__window_size = window_size
         if self.__auth_type not in [None, 'google', 'windowslive']:
             raise ValueError('Invalid authentication type')
         self.__session_token = session_token
@@ -102,13 +104,12 @@ class ChatGPT:
 
         # Start the browser
         options = uc.ChromeOptions()
-        options.add_argument('--window-size=800,600')
+        options.add_argument('--window-size=%s,%s' % self.__window_size)
         if self.__proxy:
             options.add_argument(f'--proxy-server={self.__proxy}')
         try:
             self.__verbose_print('[init] Starting browser')
             self.driver = uc.Chrome(options=options, enable_cdp_events=True)
-            self.driver.maximize_window()
         except TypeError as e:
             if str(e) == 'expected str, bytes or os.PathLike object, not NoneType':
                 raise ValueError('Chrome installation not found')
@@ -414,4 +415,4 @@ class ChatGPT:
         Reset the conversation
         '''
         self.__verbose_print('Resetting conversation')
-        self.driver.find_element(By.LINK_TEXT, 'New Thread').click()
+        self.driver.find_element(By.LINK_TEXT, 'New Chat').click()
