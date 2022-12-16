@@ -384,7 +384,7 @@ class ChatGPT:
 
         # Wait for the response to be ready
         self.__verbose_print('[send_msg] Waiting for completion')
-        WebDriverWait(self.driver, 90).until_not(
+        WebDriverWait(self.driver, 600).until_not(
             EC.presence_of_element_located((By.CLASS_NAME, 'result-streaming'))
         )
 
