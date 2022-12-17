@@ -52,7 +52,7 @@ class ChatGPT:
         self.__password = password
         self.__auth_type = auth_type
         self.__window_size = window_size
-        if self.__auth_type not in [None, 'google', 'windowslive']:
+        if self.__auth_type not in [None, 'google', 'windowslive', 'openai']:
             raise ValueError('Invalid authentication type')
         self.__session_token = session_token
         if not self.__session_token:
@@ -215,66 +215,15 @@ class ChatGPT:
         WebDriverWait(self.driver, 5).until(
             EC.presence_of_element_located((By.XPATH, '//h1[text()="Welcome back"]'))
         )
-        self.driver.find_element(
-            By.XPATH, f'//button[@data-provider="{self.__auth_type}"]'
-        ).click()
 
         if self.__auth_type == 'google':
+            self.driver.find_element(
+                By.XPATH, f'//button[@data-provider="{self.__auth_type}"]'
+            ).click()
             # Enter email
-            try:
-                self.__verbose_print('[login] Checking if Google remembers email')
-                WebDriverWait(self.driver, 3).until(
-                    EC.element_to_be_clickable(
-                        (By.XPATH, f'//div[@data-identifier="{self.__email}"]')
-                    )
-                )
-                self.__verbose_print('[login] Google remembers email')
-                self.driver.find_element(
-                    By.XPATH, f'//div[@data-identifier="{self.__email}"]'
-                ).click()
-            except SeleniumExceptions.TimeoutException:
-                self.__verbose_print('[login] Google does not remember email')
-                self.__verbose_print('[login] Entering email')
-                WebDriverWait(self.driver, 5).until(
-                    EC.element_to_be_clickable((By.XPATH, '//input[@type="email"]'))
-                )
-                self.driver.find_element(By.XPATH, '//input[@type="email"]').send_keys(
-                    self.__email
-                )
-                self.__verbose_print('[login] Clicking Next')
-                self.driver.find_element(By.XPATH, '//*[@id="identifierNext"]').click()
-
-                # Enter password
-                self.__verbose_print('[login] Entering password')
-                WebDriverWait(self.driver, 5).until(
-                    EC.element_to_be_clickable((By.XPATH, '//input[@type="password"]'))
-                )
-                self.driver.find_element(
-                    By.XPATH, '//input[@type="password"]'
-                ).send_keys(self.__password)
-                self.__verbose_print('[login] Clicking Next')
-                self.driver.find_element(By.XPATH, '//*[@id="passwordNext"]').click()
-
-            # wait verification code
-            try:
-                self.__verbose_print('[login] Check if verification code is required')
-                WebDriverWait(self.driver, 5).until(
-                    EC.presence_of_element_located((By.TAG_NAME, 'samp'))
-                )
-                self.__verbose_print('[login] code is required')
-                prev_code = self.driver.find_elements(By.TAG_NAME, 'samp')[0].text
-                print('Verification code:', prev_code)
-                while True:
-                    code = self.driver.find_elements(By.TAG_NAME, 'samp')
-                    if not code:
-                        break
-                    if code[0].text != prev_code:
-                        print('Verification code:', code[0].text)
-                        prev_code = code[0].text
-                    time.sleep(1)
-            except SeleniumExceptions.TimeoutException:
-                self.__verbose_print('[login] code is not required')
-                pass
+            self.__google_login()
+        elif self.__auth_type == 'openai':
+            self.__openai_login()
 
         # Check if logged in correctly
         try:
@@ -290,6 +239,98 @@ class ChatGPT:
         self.__verbose_print('[login] Closing tab')
         self.driver.close()
         self.driver.switch_to.window(original_window)
+
+    def __google_login(self):
+        try:
+            self.__verbose_print('[login] Checking if Google remembers email')
+            WebDriverWait(self.driver, 3).until(
+                EC.element_to_be_clickable(
+                    (By.XPATH, f'//div[@data-identifier="{self.__email}"]')
+                )
+            )
+            self.__verbose_print('[login] Google remembers email')
+            self.driver.find_element(
+                By.XPATH, f'//div[@data-identifier="{self.__email}"]'
+            ).click()
+        except SeleniumExceptions.TimeoutException:
+            self.__verbose_print('[login] Google does not remember email')
+            self.__verbose_print('[login] Entering email')
+            WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, '//input[@type="email"]'))
+            )
+            self.driver.find_element(By.XPATH, '//input[@type="email"]').send_keys(
+                self.__email
+            )
+            self.__verbose_print('[login] Clicking Next')
+            self.driver.find_element(By.XPATH, '//*[@id="identifierNext"]').click()
+
+            # Enter password
+            self.__verbose_print('[login] Entering password')
+            WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, '//input[@type="password"]'))
+            )
+            self.driver.find_element(
+                By.XPATH, '//input[@type="password"]'
+            ).send_keys(self.__password)
+            self.__verbose_print('[login] Clicking Next')
+            self.driver.find_element(By.XPATH, '//*[@id="passwordNext"]').click()
+        # wait verification code
+        try:
+            self.__verbose_print('[login] Check if verification code is required')
+            WebDriverWait(self.driver, 5).until(
+                EC.presence_of_element_located((By.TAG_NAME, 'samp'))
+            )
+            self.__verbose_print('[login] code is required')
+            prev_code = self.driver.find_elements(By.TAG_NAME, 'samp')[0].text
+            print('Verification code:', prev_code)
+            while True:
+                code = self.driver.find_elements(By.TAG_NAME, 'samp')
+                if not code:
+                    break
+                if code[0].text != prev_code:
+                    print('Verification code:', code[0].text)
+                    prev_code = code[0].text
+                time.sleep(1)
+        except SeleniumExceptions.TimeoutException:
+            self.__verbose_print('[login] code is not required')
+            pass
+
+    def __openai_login(self):
+        self.__verbose_print('[login] Entering email')
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, '//input[@name="username"]'))
+        )
+        self.driver.find_element(By.XPATH, '//input[@name="username"]').send_keys(
+            self.__email
+        )
+        # switch reCAPTCHA and click
+        try:
+            self.driver.switch_to.frame(0)
+            time.sleep(0.5)
+            WebDriverWait(self.driver, 3).until(
+                EC.element_to_be_clickable((By.XPATH, '//label[@class="rc-anchor-center-item rc-anchor-checkbox-label"]'))
+            )
+            self.driver.find_element(By.XPATH, '//label[@class="rc-anchor-center-item rc-anchor-checkbox-label"]').click()
+
+            time.sleep(3)
+
+        except SeleniumExceptions.NoSuchFrameException or SeleniumExceptions.TimeoutException:
+            pass
+
+        # switch back
+        self.driver.switch_to.default_content()
+        self.__verbose_print('[login] Clicking Next')
+        self.driver.find_element(By.XPATH, '//button[text()="Continue"]').click()
+        # Enter password
+        self.__verbose_print('[login] Entering password')
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, '//input[@type="password"]'))
+        )
+        self.driver.find_element(
+            By.XPATH, '//input[@type="password"]'
+        ).send_keys(self.__password)
+        self.__verbose_print('[login] Clicking Next')
+        self.driver.find_element(By.XPATH, '//button[text()="Continue"]').click()
 
     def __ensure_cf(self, retry: int = 0) -> None:
         '''
