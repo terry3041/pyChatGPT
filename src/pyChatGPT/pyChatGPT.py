@@ -20,14 +20,14 @@ class ChatGPT:
     '''
 
     def __init__(
-        self,
-        session_token: str = None,
-        email: str = None,
-        password: str = None,
-        auth_type: str = None,
-        proxy: str = None,
-        verbose: bool = False,
-        window_size: tuple = (800, 600),
+            self,
+            session_token: str = None,
+            email: str = None,
+            password: str = None,
+            auth_type: str = None,
+            proxy: str = None,
+            verbose: bool = False,
+            window_size: tuple = (800, 600),
     ) -> None:
         '''
         Initialize the ChatGPT class\n
@@ -44,7 +44,7 @@ class ChatGPT:
 
         self.__proxy = proxy
         if self.__proxy and not re.findall(
-            r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.__proxy
+                r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.__proxy
         ):
             raise ValueError('Invalid proxy format')
 
@@ -62,7 +62,7 @@ class ChatGPT:
                 )
 
         self.__is_headless = (
-            platform.system() == 'Linux' and 'DISPLAY' not in os.environ
+                platform.system() == 'Linux' and 'DISPLAY' not in os.environ
         )
         self.__verbose_print('[0] Platform:', platform.system())
         self.__verbose_print('[0] Display:', 'DISPLAY' in os.environ)
@@ -295,6 +295,22 @@ class ChatGPT:
             self.__verbose_print('[login] code is not required')
             pass
 
+    def __have_recaptcha_value(self):
+        try:
+            self.driver.switch_to.default_content()
+            recaptcha_result = self.driver.find_element(By.XPATH, '//input[@name="captcha" and @type="hidden"]')
+            return recaptcha_result.get_attribute('value') != ''
+        except SeleniumExceptions.NoSuchElementException:
+            return False
+
+    def __have_image_recaptcha(self):
+        self.driver.switch_to.default_content()
+        try:
+            has_recaptcha_challenge = WebDriverWait(self.driver, 3).until(EC.frame_to_be_available_and_switch_to_it(
+                (By.CSS_SELECTOR, "iframe[title='recaptcha challenge expires in two minutes']")))
+        except SeleniumExceptions.TimeoutException:
+            return False
+
     def __openai_login(self):
         self.__verbose_print('[login] Entering email')
         WebDriverWait(self.driver, 5).until(
@@ -303,19 +319,34 @@ class ChatGPT:
         self.driver.find_element(By.XPATH, '//input[@name="username"]').send_keys(
             self.__email
         )
+        # sometimes need to click Continue first to show reCAPTCHA
+        self.driver.find_element(By.XPATH, '//button[text()="Continue"]').click()
         # switch reCAPTCHA and click
+        need_check_recaptcha_result = False
         try:
-            self.driver.switch_to.frame(0)
             time.sleep(0.5)
+            WebDriverWait(self.driver, 3).until(EC.frame_to_be_available_and_switch_to_it(
+                (By.CSS_SELECTOR, "iframe[title='reCAPTCHA']")))
             WebDriverWait(self.driver, 3).until(
-                EC.element_to_be_clickable((By.XPATH, '//label[@class="rc-anchor-center-item rc-anchor-checkbox-label"]'))
+                EC.element_to_be_clickable(
+                    (By.XPATH, '//label[@class="rc-anchor-center-item rc-anchor-checkbox-label"]'))
             )
-            self.driver.find_element(By.XPATH, '//label[@class="rc-anchor-center-item rc-anchor-checkbox-label"]').click()
+            self.driver.find_element(By.XPATH,
+                                     '//label[@class="rc-anchor-center-item rc-anchor-checkbox-label"]').click()
+            need_check_recaptcha_result = True
+        except SeleniumExceptions.NoSuchFrameException as e:
+            self.__verbose_print(e)
+        except SeleniumExceptions.TimeoutException as e:
+            self.__verbose_print(e)
 
-            time.sleep(3)
+        while need_check_recaptcha_result:
+            # check image selection reCAPTCHA
+            # self.__have_image_recaptcha()
+            if self.__have_recaptcha_value():
+                break
+            self.__verbose_print('[login] Waiting for reCAPTCHA result')
 
-        except SeleniumExceptions.NoSuchFrameException or SeleniumExceptions.TimeoutException:
-            pass
+            time.sleep(1)
 
         # switch back
         self.driver.switch_to.default_content()
