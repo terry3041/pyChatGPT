@@ -498,12 +498,17 @@ class ChatGPT:
 
         # Get the response element
         self.__verbose_print('[send_msg] Finding response element')
-        response = self.driver.find_elements(
-            By.XPATH, "//div[starts-with(@class, 'markdown prose break-words')]"
-        )[-1]
+
+        # response = self.driver.find_elements(
+        #     By.XPATH, "//div[starts-with(@class, 'markdown prose break-words')]"
+        # )[-1]
+
+        # bugfix: find the last div that contains p tag.
+        response = self.driver.find_elements(By.XPATH, '//div[@class="flex-1 overflow-hidden"]//div[p]')[-1]
 
         # Check if the response is an error
         self.__verbose_print('[send_msg] Checking if response is an error')
+
         if 'text-red' in response.get_attribute('class'):
             self.__verbose_print('[send_msg] Response is an error')
             raise ValueError(response.text)
