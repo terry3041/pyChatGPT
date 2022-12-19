@@ -368,7 +368,7 @@ class ChatGPT:
             self.__verbose_print(e)
 
         # try 2captcha
-        if self.__have_recaptcha_value and self.__twocaptcha_apikey:
+        if not self.__have_recaptcha_value and self.__twocaptcha_apikey:
             self.__2captcha_solve()
 
         if self.__have_recaptcha_value():
