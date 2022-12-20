@@ -2,6 +2,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver import DesiredCapabilities
 from selenium.common import exceptions as SeleniumExceptions
 import undetected_chromedriver as uc
 
@@ -385,6 +387,12 @@ class ChatGPT:
 
         # switch back
         self.driver.switch_to.default_content()
+        # Exit reCAPTCHA iframe by clicking on blank space, then "Continue" button is available
+        action = ActionChains(self.driver)
+        action.move_by_offset(1, 1)
+        action.click()
+        action.perform()
+
         self.__verbose_print('[login] Clicking Continue')
         self.driver.find_element(By.XPATH, '//button[text()="Continue"]').click()
         # Enter password
