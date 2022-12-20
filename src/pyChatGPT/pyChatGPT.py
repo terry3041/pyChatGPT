@@ -368,19 +368,20 @@ class ChatGPT:
             self.__verbose_print(e)
 
         # try 2captcha
-        if not self.__have_recaptcha_value and self.__twocaptcha_apikey:
+        if not self.__have_recaptcha_value() and self.__twocaptcha_apikey:
             self.__2captcha_solve()
 
-        if self.__have_recaptcha_value():
-            self.__verbose_print('[login] Congrats, solved reCAPTCHA.')
-        else:
-            self.__verbose_print('[login] Ops, you have to solve reCAPTCHA on browser.')
-            while need_check_recaptcha_result:
-                # check image selection reCAPTCHA
-                # self.__have_image_recaptcha()
-                time.sleep(1)
-                if self.__have_recaptcha_value():
-                    break
+        if need_check_recaptcha_result:
+            if self.__have_recaptcha_value():
+                self.__verbose_print('[login] Congrats, solved reCAPTCHA.')
+            else:
+                self.__verbose_print('[login] Ops, you have to solve reCAPTCHA on browser.')
+                while need_check_recaptcha_result:
+                    # check image selection reCAPTCHA
+                    # self.__have_image_recaptcha()
+                    time.sleep(1)
+                    if self.__have_recaptcha_value():
+                        break
 
         # switch back
         self.driver.switch_to.default_content()
