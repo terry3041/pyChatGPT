@@ -31,7 +31,7 @@ class ChatGPT:
             verbose: bool = False,
             window_size: tuple = (800, 600),
             twocaptcha_apikey: str = '',
-            cookies_path: str = ''
+            openai_auth_semi_automatic=True
     ) -> None:
         '''
         Initialize the ChatGPT class\n
@@ -40,9 +40,12 @@ class ChatGPT:
         - session_token: (optional) Your session token in cookies named as `__Secure-next-auth.session-token` from https://chat.openai.com/chat
         - email: (optional) Your email
         - password: (optional) Your password
-        - auth_type: The type of authentication to use. Can only be `google` at the moment
+        - auth_type: The type of authentication to use. Can only be `google` or `openai` at the moment
         - proxy: (optional) The proxy to use, in URL format (i.e. `https://ip:port`)
         - verbose: (optional) Whether to print debug messages
+        - window_size: (optional) window_size for web driver
+        - twocaptcha_apikey: (optional) 2captcha apikey, for solving reCAPTCHA. Use the apikey only for auth_type='openai'
+        - openai_auth_semi_automatic: (optional) allow solving reCAPTCHA by user when 2captcha method have failed.
         '''
         self.__verbose = verbose
 
@@ -57,7 +60,7 @@ class ChatGPT:
         self.__auth_type = auth_type
         self.__window_size = window_size
         self.__twocaptcha_apikey = twocaptcha_apikey
-        self.__cookies_path = cookies_path
+        self.__openai_auth_semi_automatic = openai_auth_semi_automatic
         if self.__auth_type not in [None, 'google', 'windowslive', 'openai']:
             raise ValueError('Invalid authentication type')
         self.__session_token = session_token
@@ -318,7 +321,7 @@ class ChatGPT:
         except SeleniumExceptions.TimeoutException:
             return False
 
-    def __2captcha_solve(self, enterprise=1, retry=2):
+    def __2captcha_solve(self, enterprise=1, retry=8):
         self.driver.switch_to.default_content()
         import twocaptcha
         self.__verbose_print('[reCAPTCHA] trying twocaptcha max retry =', retry)
@@ -381,7 +384,7 @@ class ChatGPT:
         if need_check_recaptcha_result:
             if self.__have_recaptcha_value():
                 self.__verbose_print('[login] Congrats, solved reCAPTCHA.')
-            else:
+            elif self.__openai_auth_semi_automatic:
                 self.__verbose_print('[login] Ops, you have to solve reCAPTCHA on browser.')
                 while need_check_recaptcha_result:
                     # check image selection reCAPTCHA
