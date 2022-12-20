@@ -30,7 +30,8 @@ class ChatGPT:
             proxy: str = None,
             verbose: bool = False,
             window_size: tuple = (800, 600),
-            twocaptcha_apikey: str = ''
+            twocaptcha_apikey: str = '',
+            cookies_path: str = ''
     ) -> None:
         '''
         Initialize the ChatGPT class\n
@@ -56,6 +57,7 @@ class ChatGPT:
         self.__auth_type = auth_type
         self.__window_size = window_size
         self.__twocaptcha_apikey = twocaptcha_apikey
+        self.__cookies_path = cookies_path
         if self.__auth_type not in [None, 'google', 'windowslive', 'openai']:
             raise ValueError('Invalid authentication type')
         self.__session_token = session_token
@@ -235,9 +237,10 @@ class ChatGPT:
             WebDriverWait(self.driver, 5).until(
                 EC.presence_of_element_located((By.XPATH, '//h1[text()="ChatGPT"]'))
             )
-        except SeleniumExceptions.TimeoutException:
+        except SeleniumExceptions.TimeoutException as e:
             self.driver.save_screenshot('login_failed.png')
-            raise ValueError('Login failed')
+            raise e
+            # raise ValueError('Login failed')
 
         # Close the tab
         self.__verbose_print('[login] Closing tab')
@@ -319,7 +322,7 @@ class ChatGPT:
         self.driver.switch_to.default_content()
         import twocaptcha
         self.__verbose_print('[reCAPTCHA] trying twocaptcha max retry =', retry)
-        solver = twocaptcha.TwoCaptcha(self.__twocaptcha_apikey)
+        solver = twocaptcha.TwoCaptcha(self.__twocaptcha_apikey, pollingInterval=5)
         # get result using 2Captcha
         el = self.driver.find_element(By.XPATH, '//div[@data-recaptcha-provider="recaptcha_enterprise"]')
         sitekey = el.get_attribute('data-recaptcha-sitekey')
@@ -331,8 +334,10 @@ class ChatGPT:
                     url=self.driver.current_url,
                     invisible=1,
                     enterprise=enterprise)
-            except twocaptcha.api.ApiException as e:
+            except Exception as e:
                 self.__verbose_print('twocaptcha solver error', e)
+            if result is not None:
+                break
         if result is None:
             return
         captcha_info_element = self.driver.find_element(By.XPATH, '//input[@name="captcha"]')
@@ -393,8 +398,10 @@ class ChatGPT:
         action.click()
         action.perform()
 
+        time.sleep(0.5)
         self.__verbose_print('[login] Clicking Continue')
         self.driver.find_element(By.XPATH, '//button[text()="Continue"]').click()
+        time.sleep(0.5)
         # Enter password
         self.__verbose_print('[login] Entering password')
         WebDriverWait(self.driver, 5).until(
