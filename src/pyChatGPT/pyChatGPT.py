@@ -1,3 +1,5 @@
+import traceback
+
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
@@ -30,7 +32,8 @@ class ChatGPT:
             verbose: bool = False,
             window_size: tuple = (800, 600),
             twocaptcha_apikey: str = '',
-            openai_auth_semi_automatic=True
+            openai_auth_semi_automatic: bool = True,
+            login_cookies_path: str = ''
     ) -> None:
         '''
         Initialize the ChatGPT class\n
@@ -45,6 +48,7 @@ class ChatGPT:
         - window_size: (optional) window_size for web driver
         - twocaptcha_apikey: (optional) 2captcha apikey, for solving reCAPTCHA. Use the apikey only for auth_type='openai'
         - openai_auth_semi_automatic: (optional) allow solving reCAPTCHA by user when 2captcha method have failed.
+        - login_cookies_path: cookies path to be saved or loaded.
         '''
         self.__verbose = verbose
 
@@ -60,6 +64,7 @@ class ChatGPT:
         self.__window_size = window_size
         self.__twocaptcha_apikey = twocaptcha_apikey
         self.__openai_auth_semi_automatic = openai_auth_semi_automatic
+        self.__login_cookies_path = login_cookies_path
         if self.__auth_type not in [None, 'google', 'windowslive', 'openai']:
             raise ValueError('Invalid authentication type')
         self.__session_token = session_token
@@ -184,6 +189,20 @@ class ChatGPT:
         alerts = self.driver.find_elements(By.XPATH, '//div[@role="alert"]')
         return alerts
 
+    def __save_chat_gpt_cookies(self, path):
+        with open(path, 'w', encoding='utf-8') as f:
+            cookies_list = self.driver.execute_cdp_cmd(
+                "Network.getCookies", {"urls": ["https://chat.openai.com/chat"]}
+            )["cookies"]
+            json.dump(cookies_list, f, indent=2, ensure_ascii=False)
+
+    def __load_chat_gpt_cookies(self, path):
+        with open(path, 'r', encoding='utf-8') as f:
+            cookies_list = json.load(f)
+        for cookie in cookies_list:
+            if cookie["name"] == "__Secure-next-auth.session-token":
+                self.driver.execute_cdp_cmd('Network.setCookie', cookie)
+
     def __login(self) -> None:
         '''
         Login to ChatGPT
@@ -192,6 +211,25 @@ class ChatGPT:
         self.__verbose_print('[login] Opening new tab')
         original_window = self.driver.current_window_handle
         self.driver.switch_to.new_window('tab')
+
+        if self.__login_cookies_path and os.path.exists(self.__login_cookies_path):
+            # load cookie json
+            try:
+                self.__verbose_print('[login] loading cookies')
+                self.__load_chat_gpt_cookies(self.__login_cookies_path)
+                self.driver.get('https://chat.openai.com/chat')
+                self.__verbose_print('[login] Checking if login was successful')
+                WebDriverWait(self.driver, 5).until(
+                    EC.presence_of_element_located((By.XPATH, '//h1[text()="ChatGPT"]'))
+                    )
+                self.__verbose_print('[login] Login with cookies successfully.')
+                self.driver.close()
+                self.driver.switch_to.window(original_window)
+                return
+            except json.decoder.JSONDecodeError:
+                self.__verbose_print('[login] Cookies json is not valid, please check', self.__login_cookies_path)
+            except SeleniumExceptions.TimeoutException:
+                self.__verbose_print('[login] Login with cookies failed, trying login next.')
 
         self.__verbose_print('[login] Opening login page')
         self.driver.get('https://chat.openai.com/auth/login')
@@ -243,7 +281,8 @@ class ChatGPT:
             self.driver.save_screenshot('login_failed.png')
             raise e
             # raise ValueError('Login failed')
-
+        if self.__login_cookies_path:
+            self.__save_chat_gpt_cookies(self.__login_cookies_path)
         # Close the tab
         self.__verbose_print('[login] Closing tab')
         self.driver.close()
@@ -376,9 +415,13 @@ class ChatGPT:
         except SeleniumExceptions.TimeoutException as e:
             self.__verbose_print(e)
 
-        # try 2captcha
-        if not self.__have_recaptcha_value() and self.__twocaptcha_apikey:
-            self.__2captcha_solve()
+        # check whether reCAPTCHA value is filled.
+        try:
+            WebDriverWait(self.driver, 3).until(
+                EC.text_to_be_present_in_element_attribute((By.XPATH, '//input[@name="captcha"]'), 'value', '_'))
+        except SeleniumExceptions.TimeoutException:
+            if self.__twocaptcha_apikey:
+                self.__2captcha_solve()
 
         if need_check_recaptcha_result:
             if self.__have_recaptcha_value():
