@@ -3,7 +3,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver import DesiredCapabilities
 from selenium.common import exceptions as SeleniumExceptions
 import undetected_chromedriver as uc
 
@@ -511,7 +510,7 @@ class ChatGPT:
 
         # Wait for the response to be ready
         self.__verbose_print('[send_msg] Waiting for completion')
-        WebDriverWait(self.driver, 600).until_not(
+        WebDriverWait(self.driver, 120).until_not(
             EC.presence_of_element_located((By.CLASS_NAME, 'result-streaming'))
         )
 
@@ -545,4 +544,7 @@ class ChatGPT:
         Reset the conversation
         '''
         self.__verbose_print('Resetting conversation')
-        self.driver.find_element(By.LINK_TEXT, 'New Chat').click()
+        self.driver.find_element(By.LINK_TEXT, 'New chat').click()
+
+    def __del__(self):
+        self.close()
