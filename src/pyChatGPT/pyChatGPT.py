@@ -83,21 +83,21 @@ class ChatGPT:
         self.__verbose_print('[0] Headless:', self.__is_headless)
         self.__init_browser()
 
+    def __del__(self):
+        '''
+        Close the browser and virtual display (if any)
+        '''
+        if hasattr(self, 'driver'):
+            self.driver.quit()
+        if hasattr(self, 'display'):
+            self.display.stop()
+
     def __verbose_print(self, *args, **kwargs) -> None:
         '''
         Print if verbose is enabled
         '''
         if self.__verbose:
             print(*args, **kwargs)
-
-    def close(self) -> None:
-        '''
-        Close the browser and stop the virtual display (if any)
-        '''
-        if hasattr(self, 'driver'):
-            self.driver.quit()
-        if hasattr(self, 'display'):
-            self.display.stop()
 
     def __init_browser(self) -> None:
         '''
@@ -616,13 +616,10 @@ class ChatGPT:
         self.__verbose_print('[send_msg] Response is not an error')
 
         # Return the response
-        return {
-            'message': markdownify.markdownify(
-                response.get_attribute('innerHTML')
-            ).replace('Copy code`', '`'),
-            'conversation_id': '',
-            'parent_id': '',
-        }
+        msg = markdownify.markdownify(response.get_attribute('innerHTML')).replace(
+            'Copy code`', '`'
+        )
+        return {'message': msg, 'conversation_id': '', 'parent_id': ''}
 
     def reset_conversation(self) -> None:
         '''
@@ -630,6 +627,3 @@ class ChatGPT:
         '''
         self.__verbose_print('Resetting conversation')
         self.driver.find_element(By.LINK_TEXT, 'New chat').click()
-
-    def __del__(self):
-        self.close()
