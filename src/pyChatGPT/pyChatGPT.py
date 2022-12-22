@@ -597,6 +597,9 @@ class ChatGPT:
 
         # Wait for the response to be ready
         self.__verbose_print('[send_msg] Waiting for completion')
+        WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located((By.CLASS_NAME, 'result-streaming'))
+        )
         WebDriverWait(self.driver, 120).until_not(
             EC.presence_of_element_located((By.CLASS_NAME, 'result-streaming'))
         )
@@ -604,7 +607,7 @@ class ChatGPT:
         # Get the response element
         self.__verbose_print('[send_msg] Finding response element')
         response = self.driver.find_elements(
-            By.XPATH, '//div[@class="flex-1 overflow-hidden"]//div[p]'
+            By.XPATH, '//div[starts-with(@class, "markdown prose w-full break-words")]'
         )[-1]
 
         # Check if the response is an error
