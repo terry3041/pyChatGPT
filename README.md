@@ -91,7 +91,7 @@ It is normal for the seession to be crashed when installing dependencies. Just i
 ```python
 # install dependencies
 !apt install chromium-browser xvfb
-!pip install - U selenium_profiles pyChatGPT
+!pip install -U selenium_profiles pyChatGPT
 
 # install chromedriver
 from selenium_profiles.utils.installer import install_chromedriver
