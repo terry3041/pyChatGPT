@@ -559,12 +559,6 @@ class ChatGPT:
 
         # Get the response element
         self.__verbose_print('[send_msg] Finding response element')
-
-        # response = self.driver.find_elements(
-        #     By.XPATH, "//div[starts-with(@class, 'markdown prose break-words')]"
-        # )[-1]
-
-        # bugfix: find the last div that contains p tag.
         response = self.driver.find_elements(By.XPATH, '//div[@class="flex-1 overflow-hidden"]//div[p]')[-1]
 
         # Check if the response is an error
@@ -577,7 +571,7 @@ class ChatGPT:
 
         # Return the response
         return {
-            'message': markdownify.markdownify(response.get_attribute('innerHTML')),
+            'message': markdownify.markdownify(response.get_attribute('innerHTML')).replace('Copy code`','`'),
             'conversation_id': '',
             'parent_id': '',
         }
