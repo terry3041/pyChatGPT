@@ -405,7 +405,7 @@ class ChatGPT:
 
         # Return the response
         return {
-            'message': markdownify.markdownify(response.get_attribute('innerHTML')),
+            'message': markdownify.markdownify(response.get_attribute('innerHTML')).replace('Copy code`','`'),
             'conversation_id': '',
             'parent_id': '',
         }
