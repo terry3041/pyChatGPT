@@ -1,5 +1,3 @@
-import traceback
-
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
@@ -23,17 +21,18 @@ class ChatGPT:
     '''
 
     def __init__(
-            self,
-            session_token: str = None,
-            email: str = None,
-            password: str = None,
-            auth_type: str = None,
-            proxy: str = None,
-            verbose: bool = False,
-            window_size: tuple = (800, 600),
-            twocaptcha_apikey: str = '',
-            openai_auth_semi_automatic: bool = True,
-            login_cookies_path: str = ''
+        self,
+        session_token: str = None,
+        email: str = None,
+        password: str = None,
+        auth_type: str = None,
+        proxy: str = None,
+        moderation: bool = True,
+        verbose: bool = False,
+        window_size: tuple = (800, 600),
+        twocaptcha_apikey: str = '',
+        openai_auth_semi_automatic: bool = True,
+        login_cookies_path: str = '',
     ) -> None:
         '''
         Initialize the ChatGPT class\n
@@ -44,6 +43,7 @@ class ChatGPT:
         - password: (optional) Your password
         - auth_type: The type of authentication to use. Can only be `google` or `openai` at the moment
         - proxy: (optional) The proxy to use, in URL format (i.e. `https://ip:port`)
+        - moderation: (optional) Whether to enable message moderation. Default is `True`
         - verbose: (optional) Whether to print debug messages
         - window_size: (optional) window_size for web driver
         - twocaptcha_apikey: (optional) 2captcha apikey, for solving reCAPTCHA. Use the apikey only for auth_type='openai'
@@ -54,7 +54,7 @@ class ChatGPT:
 
         self.__proxy = proxy
         if self.__proxy and not re.findall(
-                r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.__proxy
+            r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.__proxy
         ):
             raise ValueError('Invalid proxy format')
 
@@ -62,6 +62,7 @@ class ChatGPT:
         self.__password = password
         self.__auth_type = auth_type
         self.__window_size = window_size
+        self.__moderation = moderation
         self.__twocaptcha_apikey = twocaptcha_apikey
         self.__openai_auth_semi_automatic = openai_auth_semi_automatic
         self.__login_cookies_path = login_cookies_path
@@ -75,7 +76,7 @@ class ChatGPT:
                 )
 
         self.__is_headless = (
-                platform.system() == 'Linux' and 'DISPLAY' not in os.environ
+            platform.system() == 'Linux' and 'DISPLAY' not in os.environ
         )
         self.__verbose_print('[0] Platform:', platform.system())
         self.__verbose_print('[0] Display:', 'DISPLAY' in os.environ)
@@ -141,6 +142,14 @@ class ChatGPT:
                     'httpOnly': True,
                     'secure': True,
                 },
+            )
+
+        # Block moderation
+        if not self.__moderation:
+            self.__verbose_print('[init] Blocking moderation')
+            self.driver.execute_cdp_cmd(
+                'Network.setBlockedURLs',
+                {'urls': ['https://chat.openai.com/backend-api/moderations']},
             )
 
         # Ensure that the Cloudflare cookies is still valid
@@ -221,15 +230,20 @@ class ChatGPT:
                 self.__verbose_print('[login] Checking if login was successful')
                 WebDriverWait(self.driver, 5).until(
                     EC.presence_of_element_located((By.XPATH, '//h1[text()="ChatGPT"]'))
-                    )
+                )
                 self.__verbose_print('[login] Login with cookies successfully.')
                 self.driver.close()
                 self.driver.switch_to.window(original_window)
                 return
             except json.decoder.JSONDecodeError:
-                self.__verbose_print('[login] Cookies json is not valid, please check', self.__login_cookies_path)
+                self.__verbose_print(
+                    '[login] Cookies json is not valid, please check',
+                    self.__login_cookies_path,
+                )
             except SeleniumExceptions.TimeoutException:
-                self.__verbose_print('[login] Login with cookies failed, trying login next.')
+                self.__verbose_print(
+                    '[login] Login with cookies failed, trying login next.'
+                )
 
         self.__verbose_print('[login] Opening login page')
         self.driver.get('https://chat.openai.com/auth/login')
@@ -317,9 +331,9 @@ class ChatGPT:
             WebDriverWait(self.driver, 5).until(
                 EC.element_to_be_clickable((By.XPATH, '//input[@type="password"]'))
             )
-            self.driver.find_element(
-                By.XPATH, '//input[@type="password"]'
-            ).send_keys(self.__password)
+            self.driver.find_element(By.XPATH, '//input[@type="password"]').send_keys(
+                self.__password
+            )
             self.__verbose_print('[login] Clicking Next')
             self.driver.find_element(By.XPATH, '//*[@id="passwordNext"]').click()
         # wait verification code
@@ -346,7 +360,9 @@ class ChatGPT:
     def __have_recaptcha_value(self):
         try:
             self.driver.switch_to.default_content()
-            recaptcha_result = self.driver.find_element(By.XPATH, '//input[@name="captcha" and @type="hidden"]')
+            recaptcha_result = self.driver.find_element(
+                By.XPATH, '//input[@name="captcha" and @type="hidden"]'
+            )
             return recaptcha_result.get_attribute('value') != ''
         except SeleniumExceptions.NoSuchElementException:
             return False
@@ -354,18 +370,27 @@ class ChatGPT:
     def __have_image_recaptcha(self):
         self.driver.switch_to.default_content()
         try:
-            has_recaptcha_challenge = WebDriverWait(self.driver, 3).until(EC.frame_to_be_available_and_switch_to_it(
-                (By.CSS_SELECTOR, "iframe[title='recaptcha challenge expires in two minutes']")))
+            WebDriverWait(self.driver, 3).until(
+                EC.frame_to_be_available_and_switch_to_it(
+                    (
+                        By.CSS_SELECTOR,
+                        "iframe[title='recaptcha challenge expires in two minutes']",
+                    )
+                )
+            )
         except SeleniumExceptions.TimeoutException:
             return False
 
     def __2captcha_solve(self, enterprise=1, retry=8):
         self.driver.switch_to.default_content()
         import twocaptcha
+
         self.__verbose_print('[reCAPTCHA] trying twocaptcha max retry =', retry)
         solver = twocaptcha.TwoCaptcha(self.__twocaptcha_apikey, pollingInterval=5)
         # get result using 2Captcha
-        el = self.driver.find_element(By.XPATH, '//div[@data-recaptcha-provider="recaptcha_enterprise"]')
+        el = self.driver.find_element(
+            By.XPATH, '//div[@data-recaptcha-provider="recaptcha_enterprise"]'
+        )
         sitekey = el.get_attribute('data-recaptcha-sitekey')
         result = None
         for i in range(retry):
@@ -374,17 +399,22 @@ class ChatGPT:
                     sitekey=sitekey,
                     url=self.driver.current_url,
                     invisible=1,
-                    enterprise=enterprise)
+                    enterprise=enterprise,
+                )
             except Exception as e:
                 self.__verbose_print('twocaptcha solver error', e)
             if result is not None:
                 break
         if result is None:
             return
-        captcha_info_element = self.driver.find_element(By.XPATH, '//input[@name="captcha"]')
-        self.driver.execute_script("arguments[0].setAttribute('value',arguments[1])",
-                                   captcha_info_element,
-                                   result['code'])
+        captcha_info_element = self.driver.find_element(
+            By.XPATH, '//input[@name="captcha"]'
+        )
+        self.driver.execute_script(
+            "arguments[0].setAttribute('value',arguments[1])",
+            captcha_info_element,
+            result['code'],
+        )
         # self.driver.find_element(By.XPATH, '//input[@name="captcha"]').get_attribute('value')
 
     def __openai_login(self):
@@ -401,14 +431,23 @@ class ChatGPT:
         need_check_recaptcha_result = False
         try:
             time.sleep(0.5)
-            WebDriverWait(self.driver, 3).until(EC.frame_to_be_available_and_switch_to_it(
-                (By.CSS_SELECTOR, "iframe[title='reCAPTCHA']")))
+            WebDriverWait(self.driver, 3).until(
+                EC.frame_to_be_available_and_switch_to_it(
+                    (By.CSS_SELECTOR, "iframe[title='reCAPTCHA']")
+                )
+            )
             WebDriverWait(self.driver, 3).until(
                 EC.element_to_be_clickable(
-                    (By.XPATH, '//label[@class="rc-anchor-center-item rc-anchor-checkbox-label"]'))
+                    (
+                        By.XPATH,
+                        '//label[@class="rc-anchor-center-item rc-anchor-checkbox-label"]',
+                    )
+                )
             )
-            self.driver.find_element(By.XPATH,
-                                     '//label[@class="rc-anchor-center-item rc-anchor-checkbox-label"]').click()
+            self.driver.find_element(
+                By.XPATH,
+                '//label[@class="rc-anchor-center-item rc-anchor-checkbox-label"]',
+            ).click()
             need_check_recaptcha_result = True
         except SeleniumExceptions.NoSuchFrameException as e:
             self.__verbose_print(e)
@@ -418,7 +457,10 @@ class ChatGPT:
         # check whether reCAPTCHA value is filled.
         try:
             WebDriverWait(self.driver, 3).until(
-                EC.text_to_be_present_in_element_attribute((By.XPATH, '//input[@name="captcha"]'), 'value', '_'))
+                EC.text_to_be_present_in_element_attribute(
+                    (By.XPATH, '//input[@name="captcha"]'), 'value', '_'
+                )
+            )
         except SeleniumExceptions.TimeoutException:
             if self.__twocaptcha_apikey:
                 self.__2captcha_solve()
@@ -427,7 +469,9 @@ class ChatGPT:
             if self.__have_recaptcha_value():
                 self.__verbose_print('[login] Congrats, solved reCAPTCHA.')
             elif self.__openai_auth_semi_automatic:
-                self.__verbose_print('[login] Ops, you have to solve reCAPTCHA on browser.')
+                self.__verbose_print(
+                    '[login] Ops, you have to solve reCAPTCHA on browser.'
+                )
                 while need_check_recaptcha_result:
                     # check image selection reCAPTCHA
                     # self.__have_image_recaptcha()
@@ -452,9 +496,9 @@ class ChatGPT:
         WebDriverWait(self.driver, 5).until(
             EC.element_to_be_clickable((By.XPATH, '//input[@type="password"]'))
         )
-        self.driver.find_element(
-            By.XPATH, '//input[@type="password"]'
-        ).send_keys(self.__password)
+        self.driver.find_element(By.XPATH, '//input[@type="password"]').send_keys(
+            self.__password
+        )
         self.__verbose_print('[login] Clicking Next')
         self.driver.find_element(By.XPATH, '//button[text()="Continue"]').click()
 
@@ -559,7 +603,9 @@ class ChatGPT:
 
         # Get the response element
         self.__verbose_print('[send_msg] Finding response element')
-        response = self.driver.find_elements(By.XPATH, '//div[@class="flex-1 overflow-hidden"]//div[p]')[-1]
+        response = self.driver.find_elements(
+            By.XPATH, '//div[@class="flex-1 overflow-hidden"]//div[p]'
+        )[-1]
 
         # Check if the response is an error
         self.__verbose_print('[send_msg] Checking if response is an error')
@@ -571,7 +617,9 @@ class ChatGPT:
 
         # Return the response
         return {
-            'message': markdownify.markdownify(response.get_attribute('innerHTML')).replace('Copy code`','`'),
+            'message': markdownify.markdownify(
+                response.get_attribute('innerHTML')
+            ).replace('Copy code`', '`'),
             'conversation_id': '',
             'parent_id': '',
         }
