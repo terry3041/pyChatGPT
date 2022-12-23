@@ -632,7 +632,10 @@ class ChatGPT:
         Reset the conversation
         '''
         self.__verbose_print('Resetting conversation')
-        self.driver.find_element(By.LINK_TEXT, 'New chat').click()
+        try:
+            self.driver.find_element(By.LINK_TEXT, 'New chat').click()
+        except SeleniumExceptions.NoSuchElementException:
+            self.driver.save_screenshot('reset_conversation_failed.png')
 
     def clear_conversation(self) -> None:
         self.__verbose_print('Clearing conversations')
