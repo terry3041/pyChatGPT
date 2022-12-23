@@ -253,19 +253,7 @@ class ChatGPT:
 
         self.__verbose_print('[login] Opening login page')
         self.driver.get('https://chat.openai.com/auth/login')
-        while True:
-            try:
-                self.__verbose_print('[login] Checking if ChatGPT is at capacity')
-                WebDriverWait(self.driver, 3).until(
-                    EC.presence_of_element_located(
-                        (By.XPATH, '//div[text()="ChatGPT is at capacity right now"]')
-                    )
-                )
-                self.__verbose_print('[login] ChatGPT is at capacity, retrying')
-                self.driver.get('https://chat.openai.com/auth/login')
-            except SeleniumExceptions.TimeoutException:
-                self.__verbose_print('[login] ChatGPT is not at capacity')
-                break
+        self.__check_capacity('https://chat.openai.com/auth/login')
 
         # Click Log in button
         self.__verbose_print('[login] Clicking Log in button')
@@ -307,6 +295,21 @@ class ChatGPT:
         self.__verbose_print('[login] Closing tab')
         self.driver.close()
         self.driver.switch_to.window(original_window)
+
+    def __check_capacity(self, target_url):
+        while True:
+            try:
+                self.__verbose_print('Checking if ChatGPT is at capacity')
+                WebDriverWait(self.driver, 3).until(
+                    EC.presence_of_element_located(
+                        (By.XPATH, '//div[text()="ChatGPT is at capacity right now"]')
+                    )
+                )
+                self.__verbose_print('ChatGPT is at capacity, retrying')
+                self.driver.get(target_url)
+            except SeleniumExceptions.TimeoutException:
+                self.__verbose_print('ChatGPT is not at capacity')
+                break
 
     def __google_login(self):
         try:
@@ -659,7 +662,8 @@ class ChatGPT:
     def refresh_chat_page(self) -> None:
         chat_url = 'https://chat.openai.com/chat'
         if self.driver.current_url == chat_url:
-            self.driver.refresh()
+            self.driver.get(chat_url)
+            self.__check_capacity(chat_url)
             self.__check_and_dismiss_intro()
             self.__check_and_dismiss_alert()
         else:
