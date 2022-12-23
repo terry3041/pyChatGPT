@@ -609,9 +609,17 @@ class ChatGPT:
 
         # Get the response element
         self.__verbose_print('[send_msg] Finding response element')
+        rs = self.driver.find_elements(
+            By.XPATH, '//div[starts-with(@class, "markdown prose w-full break-words")]'
+        )
+        # if(len(rs) >= 1):
+        #     response = rs[-1]
+        # else:
+        #     response = "Try Again"
         response = self.driver.find_elements(
             By.XPATH, '//div[starts-with(@class, "markdown prose w-full break-words")]'
         )[-1]
+        print(response)
 
         # Check if the response is an error
         self.__verbose_print('[send_msg] Checking if response is an error')
@@ -625,7 +633,7 @@ class ChatGPT:
         msg = markdownify.markdownify(response.get_attribute('innerHTML')).replace(
             'Copy code`', '`'
         )
-        return {'message': msg, 'conversation_id': '', 'parent_id': ''}
+        return {'message': msg, 'conversation_id': self.conversation_id, 'parent_id': ''}
 
     def reset_conversation(self) -> None:
         '''
