@@ -21,18 +21,18 @@ class ChatGPT:
     '''
 
     def __init__(
-        self,
-        session_token: str = None,
-        email: str = None,
-        password: str = None,
-        auth_type: str = None,
-        proxy: str = None,
-        moderation: bool = True,
-        verbose: bool = False,
-        window_size: tuple = (800, 600),
-        twocaptcha_apikey: str = '',
-        openai_auth_semi_automatic: bool = True,
-        login_cookies_path: str = '',
+            self,
+            session_token: str = None,
+            email: str = None,
+            password: str = None,
+            auth_type: str = None,
+            proxy: str = None,
+            moderation: bool = True,
+            verbose: bool = False,
+            window_size: tuple = (800, 600),
+            twocaptcha_apikey: str = '',
+            openai_auth_semi_automatic: bool = True,
+            login_cookies_path: str = '',
     ) -> None:
         '''
         Initialize the ChatGPT class\n
@@ -54,7 +54,7 @@ class ChatGPT:
 
         self.__proxy = proxy
         if self.__proxy and not re.findall(
-            r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.__proxy
+                r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.__proxy
         ):
             raise ValueError('Invalid proxy format')
 
@@ -76,7 +76,7 @@ class ChatGPT:
                 )
 
         self.__is_headless = (
-            platform.system() == 'Linux' and 'DISPLAY' not in os.environ
+                platform.system() == 'Linux' and 'DISPLAY' not in os.environ
         )
         self.__verbose_print('[0] Platform:', platform.system())
         self.__verbose_print('[0] Display:', 'DISPLAY' in os.environ)
@@ -161,12 +161,31 @@ class ChatGPT:
         self.driver.get('https://chat.openai.com/chat')
 
         # Dismiss the ChatGPT intro
-        self.__verbose_print('[init] Check if there is intro')
+
+        self.__check_and_dismiss_intro()
+
+        # Check if there is an alert
+        self.__verbose_print('[init] Check if there is alert')
+        self.__check_and_dismiss_alert()
+
+    def __check_and_dismiss_alert(self):
+        alerts = self.__is_high_demand()
+        if alerts:
+            self.__verbose_print('Dismissing alert')
+            self.driver.execute_script(
+                """
+            var element = document.querySelector('div[role="alert"]');
+            if (element)
+                element.parentNode.removeChild(element);
+            """
+            )
+
+    def __check_and_dismiss_intro(self):
         try:
             WebDriverWait(self.driver, 3).until(
                 EC.presence_of_element_located((By.ID, 'headlessui-portal-root'))
             )
-            self.__verbose_print('[init] Dismissing intro')
+            self.__verbose_print('Dismissing intro')
             self.driver.execute_script(
                 """
             var element = document.getElementById('headlessui-portal-root');
@@ -177,19 +196,6 @@ class ChatGPT:
         except SeleniumExceptions.TimeoutException:
             self.__verbose_print('[init] Did not found one')
             pass
-
-        # Check if there is an alert
-        self.__verbose_print('[init] Check if there is alert')
-        alerts = self.__is_high_demand()
-        if alerts:
-            self.__verbose_print('[init] Dismissing alert')
-            self.driver.execute_script(
-                """
-            var element = document.querySelector('div[role="alert"]');
-            if (element)
-                element.parentNode.removeChild(element);
-            """
-            )
 
     def __is_high_demand(self) -> list or None:
         '''
@@ -627,3 +633,31 @@ class ChatGPT:
         '''
         self.__verbose_print('Resetting conversation')
         self.driver.find_element(By.LINK_TEXT, 'New chat').click()
+
+    def clear_conversation(self) -> None:
+        self.__verbose_print('Clearing conversations')
+        try:
+            self.driver.find_element(By.LINK_TEXT, 'Clear conversations').click()
+        except SeleniumExceptions.NoSuchElementException:
+            # the "Clear conversations" button does not show for the second time, maybe it is a bug.
+            pass
+        try:
+            self.driver.find_element(By.LINK_TEXT, 'Confirm clear conversations').click()
+        except SeleniumExceptions.NoSuchElementException:
+            return
+        try:
+            WebDriverWait(self.driver, 20).until_not(EC.presence_of_element_located(
+                (By.XPATH,
+                 '//div[substring(@class, string-length(@class) - string-length("text-sm") + 1)  = "text-sm"]//a')
+            ))
+        except SeleniumExceptions.TimeoutException:
+            self.__verbose_print('Clearing conversations failed.')
+
+    def refresh_chat_page(self) -> None:
+        chat_url = 'https://chat.openai.com/chat'
+        if self.driver.current_url == chat_url:
+            self.driver.refresh()
+            self.__check_and_dismiss_intro()
+            self.__check_and_dismiss_alert()
+        else:
+            self.__verbose_print('[refresh] current_url is not %s' % chat_url)
