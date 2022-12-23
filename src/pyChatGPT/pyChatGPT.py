@@ -612,28 +612,25 @@ class ChatGPT:
         rs = self.driver.find_elements(
             By.XPATH, '//div[starts-with(@class, "markdown prose w-full break-words")]'
         )
-        # if(len(rs) >= 1):
-        #     response = rs[-1]
-        # else:
-        #     response = "Try Again"
-        response = self.driver.find_elements(
-            By.XPATH, '//div[starts-with(@class, "markdown prose w-full break-words")]'
-        )[-1]
-        print(response)
+        if(len(rs) >= 1):
+            response = rs[-1]
 
-        # Check if the response is an error
-        self.__verbose_print('[send_msg] Checking if response is an error')
+            # Check if the response is an error
+            self.__verbose_print('[send_msg] Checking if response is an error')
 
-        if 'text-red' in response.get_attribute('class'):
-            self.__verbose_print('[send_msg] Response is an error')
-            raise ValueError(response.text)
-        self.__verbose_print('[send_msg] Response is not an error')
+            if 'text-red' in response.get_attribute('class'):
+                self.__verbose_print('[send_msg] Response is an error')
+                raise ValueError(response.text)
+            self.__verbose_print('[send_msg] Response is not an error')
 
-        # Return the response
-        msg = markdownify.markdownify(response.get_attribute('innerHTML')).replace(
-            'Copy code`', '`'
-        )
-        return {'message': msg, 'conversation_id': self.conversation_id, 'parent_id': ''}
+            # Return the response
+            msg = markdownify.markdownify(response.text).replace(
+                'Copy code`', '`'
+            )
+        else:
+            msg = ""
+            raise Exception("Can't Find Response")
+        return {'message': msg, 'conversation_id': '', 'parent_id': ''}
 
     def reset_conversation(self) -> None:
         '''
