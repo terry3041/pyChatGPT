@@ -21,24 +21,26 @@ class ChatGPT:
     '''
 
     def __init__(
-            self,
-            session_token: str = None,
-            email: str = None,
-            password: str = None,
-            auth_type: str = None,
-            proxy: str = None,
-            moderation: bool = True,
-            verbose: bool = False,
-            window_size: tuple = (800, 600),
-            twocaptcha_apikey: str = '',
-            openai_auth_semi_automatic: bool = True,
-            login_cookies_path: str = '',
+        self,
+        session_token: str = None,
+        conversation_id: str = "",
+        email: str = None,
+        password: str = None,
+        auth_type: str = None,
+        proxy: str = None,
+        moderation: bool = True,
+        verbose: bool = False,
+        window_size: tuple = (800, 600),
+        twocaptcha_apikey: str = '',
+        openai_auth_semi_automatic: bool = True,
+        login_cookies_path: str = '',
     ) -> None:
         '''
         Initialize the ChatGPT class\n
         Either provide a session token or email and password\n
         Parameters:
         - session_token: (optional) Your session token in cookies named as `__Secure-next-auth.session-token` from https://chat.openai.com/chat
+        - conversation_id: (optional) Your conversation id from url `https://chat.openai.com/chat/${conversation_id}`
         - email: (optional) Your email
         - password: (optional) Your password
         - auth_type: The type of authentication to use. Can only be `google` or `openai` at the moment
@@ -54,7 +56,7 @@ class ChatGPT:
 
         self.__proxy = proxy
         if self.__proxy and not re.findall(
-                r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.__proxy
+            r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.__proxy
         ):
             raise ValueError('Invalid proxy format')
 
@@ -69,6 +71,7 @@ class ChatGPT:
         if self.__auth_type not in [None, 'google', 'windowslive', 'openai']:
             raise ValueError('Invalid authentication type')
         self.__session_token = session_token
+        self.conversation_id = conversation_id
         if not self.__session_token:
             if not self.__email or not self.__password or not self.__auth_type:
                 raise ValueError(
@@ -76,7 +79,7 @@ class ChatGPT:
                 )
 
         self.__is_headless = (
-                platform.system() == 'Linux' and 'DISPLAY' not in os.environ
+            platform.system() == 'Linux' and 'DISPLAY' not in os.environ
         )
         self.__verbose_print('[0] Platform:', platform.system())
         self.__verbose_print('[0] Display:', 'DISPLAY' in os.environ)
@@ -169,7 +172,7 @@ class ChatGPT:
 
         # Open the chat page
         self.__verbose_print('[init] Opening chat page')
-        self.driver.get('https://chat.openai.com/chat')
+        self.driver.get('https://chat.openai.com/chat/' + self.conversation_id)
 
         # Dismiss the ChatGPT intro
 
@@ -594,6 +597,9 @@ class ChatGPT:
 
         # Wait for the response to be ready
         self.__verbose_print('[send_msg] Waiting for completion')
+        WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located((By.CLASS_NAME, 'result-streaming'))
+        )
         WebDriverWait(self.driver, 120).until_not(
             EC.presence_of_element_located((By.CLASS_NAME, 'result-streaming'))
         )
@@ -610,6 +616,10 @@ class ChatGPT:
         if 'text-red' in response.get_attribute('class'):
             self.__verbose_print('[send_msg] Response is an error')
             raise ValueError(response.text)
+
+        response = self.driver.find_elements(
+            By.XPATH, '//div[starts-with(@class, "markdown prose w-full break-words")]'
+        )[-1]
         self.__verbose_print('[send_msg] Response is not an error')
 
         # Return the response
