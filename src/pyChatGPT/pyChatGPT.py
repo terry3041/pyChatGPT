@@ -23,6 +23,7 @@ class ChatGPT:
     def __init__(
         self,
         session_token: str = None,
+        conversation_id: str = "",
         email: str = None,
         password: str = None,
         auth_type: str = None,
@@ -39,6 +40,7 @@ class ChatGPT:
         Either provide a session token or email and password\n
         Parameters:
         - session_token: (optional) Your session token in cookies named as `__Secure-next-auth.session-token` from https://chat.openai.com/chat
+        - conversation_id: (optional) Your conversation id from url `https://chat.openai.com/chat/${conversation_id}`
         - email: (optional) Your email
         - password: (optional) Your password
         - auth_type: The type of authentication to use. Can only be `google` or `openai` at the moment
@@ -69,6 +71,7 @@ class ChatGPT:
         if self.__auth_type not in [None, 'google', 'windowslive', 'openai']:
             raise ValueError('Invalid authentication type')
         self.__session_token = session_token
+        self.conversation_id = conversation_id
         if not self.__session_token:
             if not self.__email or not self.__password or not self.__auth_type:
                 raise ValueError(
@@ -158,7 +161,7 @@ class ChatGPT:
 
         # Open the chat page
         self.__verbose_print('[init] Opening chat page')
-        self.driver.get('https://chat.openai.com/chat')
+        self.driver.get('https://chat.openai.com/chat/' + self.conversation_id)
 
         # Dismiss the ChatGPT intro
         self.__verbose_print('[init] Check if there is intro')
@@ -201,7 +204,7 @@ class ChatGPT:
     def __save_chat_gpt_cookies(self, path):
         with open(path, 'w', encoding='utf-8') as f:
             cookies_list = self.driver.execute_cdp_cmd(
-                "Network.getCookies", {"urls": ["https://chat.openai.com/chat"]}
+                "Network.getCookies", {"urls": ["https://chat.openai.com/chat/" + self.conversation_id]}
             )["cookies"]
             json.dump(cookies_list, f, indent=2, ensure_ascii=False)
 
@@ -226,7 +229,7 @@ class ChatGPT:
             try:
                 self.__verbose_print('[login] loading cookies')
                 self.__load_chat_gpt_cookies(self.__login_cookies_path)
-                self.driver.get('https://chat.openai.com/chat')
+                self.driver.get('https://chat.openai.com/chat/' + self.conversation_id)
                 self.__verbose_print('[login] Checking if login was successful')
                 WebDriverWait(self.driver, 5).until(
                     EC.presence_of_element_located((By.XPATH, '//h1[text()="ChatGPT"]'))
