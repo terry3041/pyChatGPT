@@ -81,7 +81,7 @@ class ChatGPT:
         self.__verbose_print('[0] Platform:', platform.system())
         self.__verbose_print('[0] Display:', 'DISPLAY' in os.environ)
         self.__verbose_print('[0] Headless:', self.__is_headless)
-        self.__init_browser()
+        self.init_browser()
 
     def __del__(self):
         '''
@@ -99,7 +99,7 @@ class ChatGPT:
         if self.__verbose:
             print(*args, **kwargs)
 
-    def __init_browser(self) -> None:
+    def init_browser(self) -> None:
         '''
         Initialize the browser
         '''
@@ -143,6 +143,17 @@ class ChatGPT:
                     'secure': True,
                 },
             )
+
+        elif self.__login_cookies_path and os.path.exists(self.__login_cookies_path):
+            # load cookie json
+            try:
+                self.__verbose_print('[login] loading cookies')
+                self.__load_chat_gpt_cookies(self.__login_cookies_path)
+            except json.decoder.JSONDecodeError:
+                self.__verbose_print(
+                    '[login] Cookies json is not valid, please check',
+                    self.__login_cookies_path,
+                )
 
         # Block moderation
         if not self.__moderation:
@@ -226,30 +237,6 @@ class ChatGPT:
         self.__verbose_print('[login] Opening new tab')
         original_window = self.driver.current_window_handle
         self.driver.switch_to.new_window('tab')
-
-        if self.__login_cookies_path and os.path.exists(self.__login_cookies_path):
-            # load cookie json
-            try:
-                self.__verbose_print('[login] loading cookies')
-                self.__load_chat_gpt_cookies(self.__login_cookies_path)
-                self.driver.get('https://chat.openai.com/chat')
-                self.__verbose_print('[login] Checking if login was successful')
-                WebDriverWait(self.driver, 5).until(
-                    EC.presence_of_element_located((By.XPATH, '//h1[text()="ChatGPT"]'))
-                )
-                self.__verbose_print('[login] Login with cookies successfully.')
-                self.driver.close()
-                self.driver.switch_to.window(original_window)
-                return
-            except json.decoder.JSONDecodeError:
-                self.__verbose_print(
-                    '[login] Cookies json is not valid, please check',
-                    self.__login_cookies_path,
-                )
-            except SeleniumExceptions.TimeoutException:
-                self.__verbose_print(
-                    '[login] Login with cookies failed, trying login next.'
-                )
 
         self.__verbose_print('[login] Opening login page')
         self.driver.get('https://chat.openai.com/auth/login')
@@ -464,6 +451,7 @@ class ChatGPT:
             self.__verbose_print(e)
 
         # check whether reCAPTCHA value is filled.
+        self.driver.switch_to.default_content()
         try:
             WebDriverWait(self.driver, 3).until(
                 EC.text_to_be_present_in_element_attribute(
