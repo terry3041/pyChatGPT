@@ -21,19 +21,19 @@ class ChatGPT:
     '''
 
     def __init__(
-        self,
-        session_token: str = None,
-        conversation_id: str = "",
-        email: str = None,
-        password: str = None,
-        auth_type: str = None,
-        proxy: str = None,
-        moderation: bool = True,
-        verbose: bool = False,
-        window_size: tuple = (800, 600),
-        twocaptcha_apikey: str = '',
-        openai_auth_semi_automatic: bool = True,
-        login_cookies_path: str = '',
+            self,
+            session_token: str = None,
+            conversation_id: str = "",
+            email: str = None,
+            password: str = None,
+            auth_type: str = None,
+            proxy: str = None,
+            moderation: bool = True,
+            verbose: bool = False,
+            window_size: tuple = (800, 600),
+            twocaptcha_apikey: str = '',
+            openai_auth_semi_automatic: bool = True,
+            login_cookies_path: str = '',
     ) -> None:
         '''
         Initialize the ChatGPT class\n
@@ -56,7 +56,7 @@ class ChatGPT:
 
         self.__proxy = proxy
         if self.__proxy and not re.findall(
-            r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.__proxy
+                r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.__proxy
         ):
             raise ValueError('Invalid proxy format')
 
@@ -79,7 +79,7 @@ class ChatGPT:
                 )
 
         self.__is_headless = (
-            platform.system() == 'Linux' and 'DISPLAY' not in os.environ
+                platform.system() == 'Linux' and 'DISPLAY' not in os.environ
         )
         self.__verbose_print('[0] Platform:', platform.system())
         self.__verbose_print('[0] Display:', 'DISPLAY' in os.environ)
@@ -147,6 +147,17 @@ class ChatGPT:
                 },
             )
 
+        elif self.__login_cookies_path and os.path.exists(self.__login_cookies_path):
+            # load cookie json
+            try:
+                self.__verbose_print('[login] loading cookies')
+                self.__load_chat_gpt_cookies(self.__login_cookies_path)
+            except json.decoder.JSONDecodeError:
+                self.__verbose_print(
+                    '[login] Cookies json is not valid, please check',
+                    self.__login_cookies_path,
+                )
+
         # Block moderation
         if not self.__moderation:
             self.__verbose_print('[init] Blocking moderation')
@@ -164,12 +175,31 @@ class ChatGPT:
         self.driver.get('https://chat.openai.com/chat/' + self.conversation_id)
 
         # Dismiss the ChatGPT intro
-        self.__verbose_print('[init] Check if there is intro')
+
+        self.__check_and_dismiss_intro()
+
+        # Check if there is an alert
+        self.__verbose_print('[init] Check if there is alert')
+        self.__check_and_dismiss_alert()
+
+    def __check_and_dismiss_alert(self):
+        alerts = self.__is_high_demand()
+        if alerts:
+            self.__verbose_print('Dismissing alert')
+            self.driver.execute_script(
+                """
+            var element = document.querySelector('div[role="alert"]');
+            if (element)
+                element.parentNode.removeChild(element);
+            """
+            )
+
+    def __check_and_dismiss_intro(self):
         try:
             WebDriverWait(self.driver, 3).until(
                 EC.presence_of_element_located((By.ID, 'headlessui-portal-root'))
             )
-            self.__verbose_print('[init] Dismissing intro')
+            self.__verbose_print('Dismissing intro')
             self.driver.execute_script(
                 """
             var element = document.getElementById('headlessui-portal-root');
@@ -181,19 +211,6 @@ class ChatGPT:
             self.__verbose_print('[init] Did not found one')
             pass
 
-        # Check if there is an alert
-        self.__verbose_print('[init] Check if there is alert')
-        alerts = self.__is_high_demand()
-        if alerts:
-            self.__verbose_print('[init] Dismissing alert')
-            self.driver.execute_script(
-                """
-            var element = document.querySelector('div[role="alert"]');
-            if (element)
-                element.parentNode.removeChild(element);
-            """
-            )
-
     def __is_high_demand(self) -> list or None:
         '''
         Check if there is an alert and close it
@@ -204,7 +221,7 @@ class ChatGPT:
     def __save_chat_gpt_cookies(self, path):
         with open(path, 'w', encoding='utf-8') as f:
             cookies_list = self.driver.execute_cdp_cmd(
-                "Network.getCookies", {"urls": ["https://chat.openai.com/chat/" + self.conversation_id]}
+                "Network.getCookies", {"urls": ["https://chat.openai.com/chat"]}
             )["cookies"]
             json.dump(cookies_list, f, indent=2, ensure_ascii=False)
 
@@ -224,45 +241,9 @@ class ChatGPT:
         original_window = self.driver.current_window_handle
         self.driver.switch_to.new_window('tab')
 
-        if self.__login_cookies_path and os.path.exists(self.__login_cookies_path):
-            # load cookie json
-            try:
-                self.__verbose_print('[login] loading cookies')
-                self.__load_chat_gpt_cookies(self.__login_cookies_path)
-                self.driver.get('https://chat.openai.com/chat/' + self.conversation_id)
-                self.__verbose_print('[login] Checking if login was successful')
-                WebDriverWait(self.driver, 5).until(
-                    EC.presence_of_element_located((By.XPATH, '//h1[text()="ChatGPT"]'))
-                )
-                self.__verbose_print('[login] Login with cookies successfully.')
-                self.driver.close()
-                self.driver.switch_to.window(original_window)
-                return
-            except json.decoder.JSONDecodeError:
-                self.__verbose_print(
-                    '[login] Cookies json is not valid, please check',
-                    self.__login_cookies_path,
-                )
-            except SeleniumExceptions.TimeoutException:
-                self.__verbose_print(
-                    '[login] Login with cookies failed, trying login next.'
-                )
-
         self.__verbose_print('[login] Opening login page')
         self.driver.get('https://chat.openai.com/auth/login')
-        while True:
-            try:
-                self.__verbose_print('[login] Checking if ChatGPT is at capacity')
-                WebDriverWait(self.driver, 3).until(
-                    EC.presence_of_element_located(
-                        (By.XPATH, '//div[text()="ChatGPT is at capacity right now"]')
-                    )
-                )
-                self.__verbose_print('[login] ChatGPT is at capacity, retrying')
-                self.driver.get('https://chat.openai.com/auth/login')
-            except SeleniumExceptions.TimeoutException:
-                self.__verbose_print('[login] ChatGPT is not at capacity')
-                break
+        self.__check_capacity('https://chat.openai.com/auth/login')
 
         # Click Log in button
         self.__verbose_print('[login] Clicking Log in button')
@@ -304,6 +285,21 @@ class ChatGPT:
         self.__verbose_print('[login] Closing tab')
         self.driver.close()
         self.driver.switch_to.window(original_window)
+
+    def __check_capacity(self, target_url):
+        while True:
+            try:
+                self.__verbose_print('Checking if ChatGPT is at capacity')
+                WebDriverWait(self.driver, 3).until(
+                    EC.presence_of_element_located(
+                        (By.XPATH, '//div[text()="ChatGPT is at capacity right now"]')
+                    )
+                )
+                self.__verbose_print('ChatGPT is at capacity, retrying')
+                self.driver.get(target_url)
+            except SeleniumExceptions.TimeoutException:
+                self.__verbose_print('ChatGPT is not at capacity')
+                break
 
     def __google_login(self):
         try:
@@ -458,6 +454,7 @@ class ChatGPT:
             self.__verbose_print(e)
 
         # check whether reCAPTCHA value is filled.
+        self.driver.switch_to.default_content()
         try:
             WebDriverWait(self.driver, 3).until(
                 EC.text_to_be_present_in_element_attribute(
@@ -600,25 +597,27 @@ class ChatGPT:
 
         # Wait for the response to be ready
         self.__verbose_print('[send_msg] Waiting for completion')
-        WebDriverWait(self.driver, 5).until(
-            EC.presence_of_element_located((By.CLASS_NAME, 'result-streaming'))
-        )
         WebDriverWait(self.driver, 120).until_not(
             EC.presence_of_element_located((By.CLASS_NAME, 'result-streaming'))
         )
 
         # Get the response element
         self.__verbose_print('[send_msg] Finding response element')
+        responses = self.driver.find_elements(
+            By.XPATH, '//div[@class="flex-1 overflow-hidden"]//div[p]'
+        )
+        if responses:
+            response = responses[-1]
+            # Check if the response is an error
+            self.__verbose_print('[send_msg] Checking if response is an error')
+
+            if 'text-red' in response.get_attribute('class'):
+                self.__verbose_print('[send_msg] Response is an error')
+                raise ValueError(response.text)
+
         response = self.driver.find_elements(
             By.XPATH, '//div[starts-with(@class, "markdown prose w-full break-words")]'
         )[-1]
-
-        # Check if the response is an error
-        self.__verbose_print('[send_msg] Checking if response is an error')
-
-        if 'text-red' in response.get_attribute('class'):
-            self.__verbose_print('[send_msg] Response is an error')
-            raise ValueError(response.text)
         self.__verbose_print('[send_msg] Response is not an error')
 
         # Return the response
@@ -632,4 +631,43 @@ class ChatGPT:
         Reset the conversation
         '''
         self.__verbose_print('Resetting conversation')
-        self.driver.find_element(By.LINK_TEXT, 'New chat').click()
+        try:
+            self.driver.find_element(By.LINK_TEXT, 'New chat').click()
+        except SeleniumExceptions.NoSuchElementException:
+            self.driver.save_screenshot('reset_conversation_failed.png')
+
+    def clear_conversation(self) -> None:
+        chat_url = 'https://chat.openai.com/chat'
+        if self.driver.current_url != chat_url:
+            self.__verbose_print('[Clearing conversations] current_url is not %s.' % chat_url)
+            return
+        self.__verbose_print('[Clearing conversations] begin')
+        try:
+            self.driver.find_element(By.LINK_TEXT, 'Clear conversations').click()
+        except SeleniumExceptions.NoSuchElementException:
+            # the "Clear conversations" button does not show for the second time, maybe it is a bug.
+            self.__verbose_print('[Clearing conversations] Clear conversations button not found.')
+            pass
+        try:
+            self.driver.find_element(By.LINK_TEXT, 'Confirm clear conversations').click()
+        except SeleniumExceptions.NoSuchElementException:
+            self.__verbose_print('[Clearing conversations] Confirm clear conversations button not found.')
+            return
+        try:
+            WebDriverWait(self.driver, 20).until_not(EC.presence_of_element_located(
+                (By.XPATH,
+                 '//div[substring(@class, string-length(@class) - string-length("text-sm") + 1)  = "text-sm"]//a')
+            ))
+            self.__verbose_print('[Clearing conversations] successfully.')
+        except SeleniumExceptions.TimeoutException:
+            self.__verbose_print('[Clearing conversations] failed.')
+
+    def refresh_chat_page(self) -> None:
+        chat_url = 'https://chat.openai.com/chat'
+        if self.driver.current_url == chat_url:
+            self.driver.get(chat_url)
+            self.__check_capacity(chat_url)
+            self.__check_and_dismiss_intro()
+            self.__check_and_dismiss_alert()
+        else:
+            self.__verbose_print('[refresh] current_url is not %s' % chat_url)
