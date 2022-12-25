@@ -73,6 +73,7 @@ print(resp['message'])
 
 api1.reset_conversation()  # reset the conversation
 api1.clear_conversations()  # clear all conversations
+api1.refresh_chat_page()  # refresh the chat page
 ```
 
 ## Frequently Asked Questions
