@@ -50,7 +50,7 @@ class ChatGPT:
         - window_size: (optional) window_size for web driver
         - twocaptcha_apikey: (optional) 2captcha apikey, for solving reCAPTCHA. Use the apikey only for auth_type='openai'
         - openai_auth_semi_automatic: (optional) allow solving reCAPTCHA by user when 2captcha method have failed.
-        - login_cookies_path: cookies path to be saved or loaded.
+        - login_cookies_path: (optional) cookies path to be saved or loaded.
         '''
         self.__verbose = verbose
 
@@ -175,7 +175,6 @@ class ChatGPT:
         self.driver.get('https://chat.openai.com/chat/' + self.conversation_id)
 
         # Dismiss the ChatGPT intro
-
         self.__check_and_dismiss_intro()
 
         # Check if there is an alert
@@ -183,7 +182,7 @@ class ChatGPT:
         self.__check_and_dismiss_alert()
 
     def __check_and_dismiss_alert(self):
-        alerts = self.__is_high_demand()
+        alerts = self.driver.find_elements(By.XPATH, '//div[@role="alert"]')
         if alerts:
             self.__verbose_print('Dismissing alert')
             self.driver.execute_script(
@@ -210,13 +209,6 @@ class ChatGPT:
         except SeleniumExceptions.TimeoutException:
             self.__verbose_print('[init] Did not found one')
             pass
-
-    def __is_high_demand(self) -> list or None:
-        '''
-        Check if there is an alert and close it
-        '''
-        alerts = self.driver.find_elements(By.XPATH, '//div[@role="alert"]')
-        return alerts
 
     def __save_chat_gpt_cookies(self, path):
         with open(path, 'w', encoding='utf-8') as f:
@@ -335,6 +327,7 @@ class ChatGPT:
             )
             self.__verbose_print('[login] Clicking Next')
             self.driver.find_element(By.XPATH, '//*[@id="passwordNext"]').click()
+
         # wait verification code
         try:
             self.__verbose_print('[login] Check if verification code is required')
@@ -630,37 +623,41 @@ class ChatGPT:
         '''
         Reset the conversation
         '''
-        self.__verbose_print('Resetting conversation')
+        chat_url = 'https://chat.openai.com/chat'
+        if not self.driver.current_url.startswith(chat_url):
+            return self.__verbose_print(f'[reset_convo] current_url is not {chat_url}.')
+
+        self.__verbose_print('[reset_convo] Resetting conversation')
         try:
             self.driver.find_element(By.LINK_TEXT, 'New chat').click()
         except SeleniumExceptions.NoSuchElementException:
+            self.__verbose_print('[reset_convo] New chat button not found')
             self.driver.save_screenshot('reset_conversation_failed.png')
 
     def clear_conversations(self) -> None:
+        '''
+        Clear all conversations
+        '''
         chat_url = 'https://chat.openai.com/chat'
-        if self.driver.current_url != chat_url:
-            self.__verbose_print(
-                '[Clearing conversations] current_url is not %s.' % chat_url
-            )
-            return
-        self.__verbose_print('[Clearing conversations] begin')
+        if not self.driver.current_url.startswith(chat_url):
+            return self.__verbose_print(f'[clear_convo] current_url is not {chat_url}.')
+
+        self.__verbose_print('[clear_convo] begin')
         try:
             self.driver.find_element(By.LINK_TEXT, 'Clear conversations').click()
         except SeleniumExceptions.NoSuchElementException:
             # the "Clear conversations" button does not show for the second time, maybe it is a bug.
-            self.__verbose_print(
-                '[Clearing conversations] Clear conversations button not found.'
-            )
+            self.__verbose_print('[clear_convo] Clear conversations button not found')
             pass
+
         try:
             self.driver.find_element(
                 By.LINK_TEXT, 'Confirm clear conversations'
             ).click()
         except SeleniumExceptions.NoSuchElementException:
-            self.__verbose_print(
-                '[Clearing conversations] Confirm clear conversations button not found.'
+            return self.__verbose_print(
+                '[clear_convo] Confirm clear conversations button not found'
             )
-            return
         try:
             WebDriverWait(self.driver, 20).until_not(
                 EC.presence_of_element_located(
@@ -670,16 +667,19 @@ class ChatGPT:
                     )
                 )
             )
-            self.__verbose_print('[Clearing conversations] successfully.')
+            self.__verbose_print('[clear_convo] Success')
         except SeleniumExceptions.TimeoutException:
-            self.__verbose_print('[Clearing conversations] failed.')
+            self.__verbose_print('[clear_convo] Failed')
 
     def refresh_chat_page(self) -> None:
+        '''
+        Refresh the chat page
+        '''
         chat_url = 'https://chat.openai.com/chat'
-        if self.driver.current_url == chat_url:
-            self.driver.get(chat_url)
-            self.__check_capacity(chat_url)
-            self.__check_and_dismiss_intro()
-            self.__check_and_dismiss_alert()
-        else:
-            self.__verbose_print('[refresh] current_url is not %s' % chat_url)
+        if not self.driver.current_url.startswith(chat_url):
+            return self.__verbose_print(f'[refresh] current_url is not {chat_url}')
+
+        self.driver.get(chat_url)
+        self.__check_capacity(chat_url)
+        self.__check_and_dismiss_intro()
+        self.__check_and_dismiss_alert()
