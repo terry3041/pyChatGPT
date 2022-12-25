@@ -84,7 +84,7 @@ class ChatGPT:
         self.__verbose_print('[0] Platform:', platform.system())
         self.__verbose_print('[0] Display:', 'DISPLAY' in os.environ)
         self.__verbose_print('[0] Headless:', self.__is_headless)
-        self.init_browser()
+        self.__init_browser()
 
     def __del__(self):
         '''
@@ -102,7 +102,7 @@ class ChatGPT:
         if self.__verbose:
             print(*args, **kwargs)
 
-    def init_browser(self) -> None:
+    def __init_browser(self) -> None:
         '''
         Initialize the browser
         '''
