@@ -21,19 +21,19 @@ class ChatGPT:
     '''
 
     def __init__(
-            self,
-            session_token: str = None,
-            conversation_id: str = "",
-            email: str = None,
-            password: str = None,
-            auth_type: str = None,
-            proxy: str = None,
-            moderation: bool = True,
-            verbose: bool = False,
-            window_size: tuple = (800, 600),
-            twocaptcha_apikey: str = '',
-            openai_auth_semi_automatic: bool = True,
-            login_cookies_path: str = '',
+        self,
+        session_token: str = None,
+        conversation_id: str = "",
+        email: str = None,
+        password: str = None,
+        auth_type: str = None,
+        proxy: str = None,
+        moderation: bool = True,
+        verbose: bool = False,
+        window_size: tuple = (800, 600),
+        twocaptcha_apikey: str = '',
+        openai_auth_semi_automatic: bool = True,
+        login_cookies_path: str = '',
     ) -> None:
         '''
         Initialize the ChatGPT class\n
@@ -56,7 +56,7 @@ class ChatGPT:
 
         self.__proxy = proxy
         if self.__proxy and not re.findall(
-                r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.__proxy
+            r'(https?|socks(4|5)?):\/\/.+:\d{1,5}', self.__proxy
         ):
             raise ValueError('Invalid proxy format')
 
@@ -79,7 +79,7 @@ class ChatGPT:
                 )
 
         self.__is_headless = (
-                platform.system() == 'Linux' and 'DISPLAY' not in os.environ
+            platform.system() == 'Linux' and 'DISPLAY' not in os.environ
         )
         self.__verbose_print('[0] Platform:', platform.system())
         self.__verbose_print('[0] Display:', 'DISPLAY' in os.environ)
@@ -636,28 +636,40 @@ class ChatGPT:
         except SeleniumExceptions.NoSuchElementException:
             self.driver.save_screenshot('reset_conversation_failed.png')
 
-    def clear_conversation(self) -> None:
+    def clear_conversations(self) -> None:
         chat_url = 'https://chat.openai.com/chat'
         if self.driver.current_url != chat_url:
-            self.__verbose_print('[Clearing conversations] current_url is not %s.' % chat_url)
+            self.__verbose_print(
+                '[Clearing conversations] current_url is not %s.' % chat_url
+            )
             return
         self.__verbose_print('[Clearing conversations] begin')
         try:
             self.driver.find_element(By.LINK_TEXT, 'Clear conversations').click()
         except SeleniumExceptions.NoSuchElementException:
             # the "Clear conversations" button does not show for the second time, maybe it is a bug.
-            self.__verbose_print('[Clearing conversations] Clear conversations button not found.')
+            self.__verbose_print(
+                '[Clearing conversations] Clear conversations button not found.'
+            )
             pass
         try:
-            self.driver.find_element(By.LINK_TEXT, 'Confirm clear conversations').click()
+            self.driver.find_element(
+                By.LINK_TEXT, 'Confirm clear conversations'
+            ).click()
         except SeleniumExceptions.NoSuchElementException:
-            self.__verbose_print('[Clearing conversations] Confirm clear conversations button not found.')
+            self.__verbose_print(
+                '[Clearing conversations] Confirm clear conversations button not found.'
+            )
             return
         try:
-            WebDriverWait(self.driver, 20).until_not(EC.presence_of_element_located(
-                (By.XPATH,
-                 '//div[substring(@class, string-length(@class) - string-length("text-sm") + 1)  = "text-sm"]//a')
-            ))
+            WebDriverWait(self.driver, 20).until_not(
+                EC.presence_of_element_located(
+                    (
+                        By.XPATH,
+                        '//div[substring(@class, string-length(@class) - string-length("text-sm") + 1)  = "text-sm"]//a',
+                    )
+                )
+            )
             self.__verbose_print('[Clearing conversations] successfully.')
         except SeleniumExceptions.TimeoutException:
             self.__verbose_print('[Clearing conversations] failed.')
