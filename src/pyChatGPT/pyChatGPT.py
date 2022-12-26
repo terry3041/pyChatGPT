@@ -31,8 +31,8 @@ class ChatGPT:
         moderation: bool = True,
         verbose: bool = False,
         window_size: tuple = (800, 600),
+        captcha_solver: str = 'pypasser',
         twocaptcha_apikey: str = '',
-        openai_auth_semi_automatic: bool = True,
         login_cookies_path: str = '',
     ) -> None:
         '''
@@ -48,8 +48,8 @@ class ChatGPT:
         - moderation: (optional) Whether to enable message moderation. Default is `True`
         - verbose: (optional) Whether to print debug messages
         - window_size: (optional) window_size for web driver
-        - twocaptcha_apikey: (optional) 2captcha apikey, for solving reCAPTCHA. Use the apikey only for auth_type='openai'
-        - openai_auth_semi_automatic: (optional) allow solving reCAPTCHA by user when 2captcha method have failed.
+        - captcha_solver: (optional) captcha solving method. Can be `pypasser` or `2captcha` or `manual`
+        - twocaptcha_apikey: (optional) 2captcha apikey, for solving reCAPTCHA. Use the apikey only for captcha_solver='2captcha'
         - login_cookies_path: (optional) cookies path to be saved or loaded.
         '''
         self.__verbose = verbose
@@ -65,8 +65,8 @@ class ChatGPT:
         self.__auth_type = auth_type
         self.__window_size = window_size
         self.__moderation = moderation
+        self.__captcha_solver = captcha_solver
         self.__twocaptcha_apikey = twocaptcha_apikey
-        self.__openai_auth_semi_automatic = openai_auth_semi_automatic
         self.__login_cookies_path = login_cookies_path
         if self.__auth_type not in [None, 'google', 'windowslive', 'openai']:
             raise ValueError('Invalid authentication type')
@@ -77,6 +77,14 @@ class ChatGPT:
                 raise ValueError(
                     'Please provide either a session token or login credentials'
                 )
+            if (self.__auth_type == 'openai') and (
+                self.__captcha_solver not in ['pypasser', '2captcha', 'manual']
+            ):
+                raise ValueError(
+                    'Invalid captcha solving method. Can be pypasser, 2captcha or manual'
+                )
+            if self.__auth_type == '2captcha' and not self.__twocaptcha_apikey:
+                raise ValueError('Please provide a 2captcha apikey')
 
         self.__is_headless = (
             platform.system() == 'Linux' and 'DISPLAY' not in os.environ
@@ -436,10 +444,11 @@ class ChatGPT:
                     )
                 )
             )
-            self.driver.find_element(
-                By.XPATH,
-                '//label[@class="rc-anchor-center-item rc-anchor-checkbox-label"]',
-            ).click()
+            # Create a div and block pypasser for some reasons
+            # self.driver.find_element(
+            #     By.XPATH,
+            #     '//label[@class="rc-anchor-center-item rc-anchor-checkbox-label"]',
+            # ).click()
             need_check_recaptcha_result = True
         except SeleniumExceptions.NoSuchFrameException as e:
             self.__verbose_print(e)
@@ -455,13 +464,18 @@ class ChatGPT:
                 )
             )
         except SeleniumExceptions.TimeoutException:
-            if self.__twocaptcha_apikey:
+            if self.__captcha_solver == '2captcha':
                 self.__2captcha_solve()
+            elif self.__captcha_solver == 'pypasser':
+                self.__verbose_print('[reCAPTCHA] trying pypasser max retry = 3')
+                from pypasser import reCaptchaV2
+
+                reCaptchaV2(self.driver)
 
         if need_check_recaptcha_result:
             if self.__have_recaptcha_value():
                 self.__verbose_print('[login] Congrats, solved reCAPTCHA.')
-            elif self.__openai_auth_semi_automatic:
+            else:
                 self.__verbose_print(
                     '[login] Ops, you have to solve reCAPTCHA on browser.'
                 )
