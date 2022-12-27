@@ -77,14 +77,23 @@ class ChatGPT:
                 raise ValueError(
                     'Please provide either a session token or login credentials'
                 )
-            if (self.__auth_type == 'openai') and (
-                self.__captcha_solver not in ['pypasser', '2captcha', 'manual']
-            ):
-                raise ValueError(
-                    'Invalid captcha solving method. Can be pypasser, 2captcha or manual'
-                )
-            if self.__auth_type == '2captcha' and not self.__twocaptcha_apikey:
-                raise ValueError('Please provide a 2captcha apikey')
+            if self.__auth_type == 'openai':
+                if self.__captcha_solver not in ['pypasser', '2captcha', 'manual']:
+                    raise ValueError(
+                        'Invalid captcha solving method. Can be pypasser, 2captcha or manual'
+                    )
+                if self.__captcha_solver == '2captcha' and not self.__twocaptcha_apikey:
+                    raise ValueError('Please provide a 2captcha apikey')
+                if self.__captcha_solver == 'pypasser':
+                    import ffmpeg_downloader as ffdl
+
+                    ffmpeg_installed = bool(ffdl.ffmpeg_version)
+                    self.__verbose_print('[0] ffmpeg installed:', ffmpeg_installed)
+                    if not ffmpeg_installed:
+                        import subprocess as sp
+
+                        sp.run(['ffdl', 'install'])
+                    os.environ['PATH'] += os.pathsep + ffdl.ffmpeg_dir
 
         self.__is_headless = (
             platform.system() == 'Linux' and 'DISPLAY' not in os.environ
@@ -467,9 +476,9 @@ class ChatGPT:
             if self.__captcha_solver == '2captcha':
                 self.__2captcha_solve()
             elif self.__captcha_solver == 'pypasser':
-                self.__verbose_print('[reCAPTCHA] trying pypasser max retry = 3')
                 from pypasser import reCaptchaV2
 
+                self.__verbose_print('[reCAPTCHA] trying pypasser max retry = 3')
                 reCaptchaV2(self.driver)
 
         if need_check_recaptcha_result:

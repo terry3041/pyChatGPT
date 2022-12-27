@@ -22,6 +22,7 @@ dependencies = [
     'markdownify >= 0.11.6',
     'PyPasser >= 0.0.5',
     'pocketsphinx >= 5.0.0',
+    'ffmpeg-downloader >= 0.2.0'
 ]
 
 [project.urls]
