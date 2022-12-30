@@ -9,14 +9,13 @@ An unofficial Python wrapper for OpenAI's ChatGPT API
 ## Features
 
 -   [x] Bypass Cloudflare's anti-bot protection using `undetected_chromedriver`
--   [x] Captcha solver when auth with login credentials (experimental)
+-   [x] OpenAI (w/ 2Captcha solver) / Google login support (experimental)
 -   [x] [Support headless machines](#how-do-i-get-it-to-work-on-headless-linux-server)
 -   [x] Proxy support (only without basic auth)
--   [x] Google login support (experimental)
 
 ## Getting Started
 
-> Since version 0.3.0, this library is using only the `undetected_chromedriver` to bypass Cloudflare's anti-bot protection. `requests` module is no longer used due to the complexity of the protection. **Please make sure you have [Google Chrome](https://www.google.com/chrome/) before using this wrapper.**.
+> Since version 0.3.0, this library is using only the `undetected_chromedriver` to bypass Cloudflare's anti-bot protection. `requests` module is no longer used due to the complexity of the protection. **Please make sure you have [Google Chrome](https://www.google.com/chrome/) / [Chromium](https://www.chromium.org/) before using this wrapper.**
 
 ### Installation
 
@@ -37,7 +36,7 @@ pip install -U pyChatGPT
 #### Interactive mode
 
 ```bash
-python -m pyChatGPT
+python3 -m pyChatGPT
 ```
 
 #### Import as a module
