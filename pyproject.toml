@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyChatGPT"
-version = "0.4.0"
+version = "0.4.1"
 authors = [
     { name="terry3041", email="s71czbem@duck.com" },
 ]
@@ -19,10 +19,7 @@ classifiers = [
 dependencies = [
     'undetected-chromedriver >= 3.1.7',
     'PyVirtualDisplay >= 3.0',
-    'markdownify >= 0.11.6',
-    'PyPasser >= 0.0.5',
-    'pocketsphinx >= 5.0.0',
-    'ffmpeg-downloader >= 0.2.0'
+    'markdownify >= 0.11.6'
 ]
 
 [project.urls]
