@@ -12,20 +12,21 @@ import json
 import re
 import os
 
+cf_challenge_form = (By.ID, 'challenge-form')
+
+chatgpt_textbox = (By.TAG_NAME, 'textarea')
+chatgpt_streaming = (By.CLASS_NAME, 'result-streaming')
+chatgpt_big_response = (By.XPATH, '//div[@class="flex-1 overflow-hidden"]//div[p]')
+chatgpt_small_response = (
+    By.XPATH,
+    '//div[starts-with(@class, "markdown prose w-full break-words")]',
+)
+chatgpt_alert = (By.XPATH, '//div[@role="alert"]')
+chatgpt_intro = (By.ID, 'headlessui-portal-root')
+chatgpt_login_btn = (By.XPATH, '//button[text()="Log in"]')
+
 
 class ChatGPT:
-    __cf_challenge = (By.ID, 'challenge-form')
-    __textbox = (By.TAG_NAME, 'textarea')
-    __streaming = (By.CLASS_NAME, 'result-streaming')
-    __big_response = (By.XPATH, '//div[@class="flex-1 overflow-hidden"]//div[p]')
-    __small_response = (
-        By.XPATH,
-        '//div[starts-with(@class, "markdown prose w-full break-words")]',
-    )
-    __alert = (By.XPATH, '//div[@role="alert"]')
-    __intro = (By.ID, 'headlessui-portal-root')
-    __login_btn = (By.XPATH, '//button[text()="Log in"]')
-
     def __init__(
         self,
         session_token: str = None,
@@ -37,6 +38,7 @@ class ChatGPT:
         captcha_solver: str = 'pypasser',
         solver_apikey: str = '',
         proxy: str = None,
+        chrome_args: list = [],
         moderation: bool = True,
         verbose: bool = False,
     ):
@@ -51,6 +53,7 @@ class ChatGPT:
         self.__captcha_solver = captcha_solver
         self.__solver_apikey = solver_apikey
         self.__proxy = proxy
+        self.__chrome_args = chrome_args
         self.__moderation = moderation
 
         if not self.__session_token and (
@@ -126,6 +129,8 @@ class ChatGPT:
         options.add_argument('--window-size=1024,768')
         if self.__proxy:
             options.add_argument(f'--proxy-server={self.__proxy}')
+        for arg in self.__chrome_args:
+            options.add_argument(arg)
         try:
             self.driver = uc.Chrome(options=options)
         except TypeError as e:
@@ -181,7 +186,7 @@ class ChatGPT:
         self.driver.get('https://chat.openai.com/api/auth/session')
         try:
             WebDriverWait(self.driver, 15).until_not(
-                EC.presence_of_element_located(self.__cf_challenge)
+                EC.presence_of_element_located(cf_challenge_form)
             )
         except SeleniumExceptions.TimeoutException:
             self.logger.debug(f'Cloudflare challenge failed, retrying {retry}...')
@@ -238,7 +243,7 @@ class ChatGPT:
 
         self.logger.debug('Clicking login button...')
         WebDriverWait(self.driver, 5).until(
-            EC.element_to_be_clickable(self.__login_btn)
+            EC.element_to_be_clickable(chatgpt_login_btn)
         ).click()
 
         WebDriverWait(self.driver, 5).until(
@@ -277,14 +282,14 @@ class ChatGPT:
         self.logger.debug('Looking for blocking elements...')
         try:
             intro = WebDriverWait(self.driver, 3).until(
-                EC.presence_of_element_located(self.__intro)
+                EC.presence_of_element_located(chatgpt_intro)
             )
             self.logger.debug('Dismissing intro...')
             self.driver.execute_script('arguments[0].remove()', intro)
         except SeleniumExceptions.TimeoutException:
             pass
 
-        alerts = self.driver.find_elements(*self.__alert)
+        alerts = self.driver.find_elements(*chatgpt_alert)
         if alerts:
             self.logger.debug('Dismissing alert...')
             self.driver.execute_script('arguments[0].remove()', alerts[0])
@@ -295,7 +300,7 @@ class ChatGPT:
 
         self.logger.debug('Sending message...')
         textbox = WebDriverWait(self.driver, 5).until(
-            EC.element_to_be_clickable(self.__textbox)
+            EC.element_to_be_clickable(chatgpt_textbox)
         )
         textbox.click()
         self.driver.execute_script(
@@ -311,17 +316,17 @@ class ChatGPT:
 
         self.logger.debug('Waiting for completion...')
         WebDriverWait(self.driver, 120).until_not(
-            EC.presence_of_element_located(self.__streaming)
+            EC.presence_of_element_located(chatgpt_streaming)
         )
 
         self.logger.debug('Getting response...')
-        responses = self.driver.find_elements(*self.__big_response)
+        responses = self.driver.find_elements(*chatgpt_big_response)
         if responses:
             response = responses[-1]
             if 'text-red' in response.get_attribute('class'):
                 self.logger.debug('Response is an error')
                 raise ValueError(response.text)
-        response = self.driver.find_elements(*self.__small_response)[-1]
+        response = self.driver.find_elements(*chatgpt_small_response)[-1]
 
         content = markdownify(response.get_attribute('innerHTML')).replace(
             'Copy code`', '`'
