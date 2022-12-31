@@ -34,7 +34,7 @@ class ChatGPT:
         captcha_solver: str = 'pypasser',
         solver_apikey: str = '',
         login_cookies_path: str = '',
-        chrome_options = [],
+        chrome_options: tuple = (),
     ) -> None:
         '''
         Initialize the ChatGPT class\n
@@ -52,7 +52,7 @@ class ChatGPT:
         - captcha_solver: (optional) captcha solving method. Can be `pypasser` or `2captcha` or `manual`
         - solver_apikey: (optional) captcha solver apikey, for solving reCAPTCHA. Use the apikey only for captcha_solver='2captcha'
         - login_cookies_path: (optional) cookies path to be saved or loaded.
-        - chrome options: (optional) list of options to initialize chrome browser with
+        - chrome options: (optional) options to initialize chrome browser with
         '''
         self.__verbose = verbose
 
