@@ -34,6 +34,7 @@ class ChatGPT:
         captcha_solver: str = 'pypasser',
         solver_apikey: str = '',
         login_cookies_path: str = '',
+        chrome_options = [],
     ) -> None:
         '''
         Initialize the ChatGPT class\n
@@ -51,6 +52,7 @@ class ChatGPT:
         - captcha_solver: (optional) captcha solving method. Can be `pypasser` or `2captcha` or `manual`
         - solver_apikey: (optional) captcha solver apikey, for solving reCAPTCHA. Use the apikey only for captcha_solver='2captcha'
         - login_cookies_path: (optional) cookies path to be saved or loaded.
+        - chrome options: (optional) list of options to initialize chrome browser with
         '''
         self.__verbose = verbose
 
@@ -68,6 +70,7 @@ class ChatGPT:
         self.__captcha_solver = captcha_solver
         self.__solver_apikey = solver_apikey
         self.__login_cookies_path = login_cookies_path
+        self.__chrome_options = chrome_options
         if self.__auth_type not in [None, 'google', 'windowslive', 'openai']:
             raise ValueError('Invalid authentication type')
         self.__session_token = session_token
@@ -143,7 +146,10 @@ class ChatGPT:
 
         # Start the browser
         options = uc.ChromeOptions()
-        options.add_argument('--window-size=%s,%s' % self.__window_size)
+        options.add_argument('--window-size=%s,%s' % self.__window_size)  
+        if self.__chrome_options:
+            for opt in self.__chrome_options:
+                options.add_argument(opt)
         if self.__proxy:
             options.add_argument(f'--proxy-server={self.__proxy}')
         try:
