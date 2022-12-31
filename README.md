@@ -8,9 +8,10 @@ An unofficial Python wrapper for OpenAI's ChatGPT API
 
 ## Features
 
--   [x] Bypass Cloudflare's anti-bot protection using `undetected_chromedriver`
--   [x] OpenAI (w/ 2Captcha solver) / Google login support (experimental)
--   [x] [Support headless machines](#how-do-i-get-it-to-work-on-headless-linux-server)
+-   [x] Cloudflare's anti-bot protection bypass using `undetected_chromedriver`
+-   [x] OpenAI / Google login support (experimental)
+-   [x] Captcha solvers support (2Captcha, PyPasser)
+-   [x] [Headless machines support](#how-do-i-get-it-to-work-on-headless-linux-server)
 -   [x] Proxy support (only without basic auth)
 
 ## Getting Started
