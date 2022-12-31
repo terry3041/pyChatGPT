@@ -6,11 +6,14 @@ from selenium.webdriver.common.by import By
 
 import undetected_chromedriver as uc
 from markdownify import markdownify
+from threading import Thread
 import platform
 import logging
 import json
+import time
 import re
 import os
+
 
 cf_challenge_form = (By.ID, 'challenge-form')
 
@@ -176,6 +179,7 @@ class ChatGPT:
         self.logger.debug('Opening chat page...')
         self.driver.get('https://chat.openai.com/chat/' + self.__conversation_id)
         self.__check_blocking_elements()
+        Thread(target=self.__keep_alive, daemon=True).start()
 
     def __ensure_cf(self, retry: int = 3) -> None:
         self.logger.debug('Opening new tab...')
@@ -277,6 +281,23 @@ class ChatGPT:
         self.logger.debug('Closing tab...')
         self.driver.close()
         self.driver.switch_to.window(original_window)
+
+    def __keep_alive(self) -> None:
+        '''
+        Keep the session alive by updating the local storage\n
+        Credit to Rawa in the ChatGPT Hacking Discord server
+        '''
+        while True:
+            self.logger.debug('Updating session...')
+            payload = (
+                '{"event":"session","data":{"trigger":"getSession"},"timestamp":%d}'
+                % int(time.time())
+            )
+            self.driver.execute_script(
+                'window.localStorage.setItem("nextauth.message", arguments[0])',
+                payload,
+            )
+            time.sleep(60)
 
     def __check_blocking_elements(self) -> None:
         self.logger.debug('Looking for blocking elements...')
