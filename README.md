@@ -8,9 +8,10 @@ An unofficial Python wrapper for OpenAI's ChatGPT API
 
 ## Features
 
--   [x] Bypass Cloudflare's anti-bot protection using `undetected_chromedriver`
--   [x] OpenAI (w/ 2Captcha solver) / Google login support (experimental)
--   [x] [Support headless machines](#how-do-i-get-it-to-work-on-headless-linux-server)
+-   [x] Cloudflare's anti-bot protection bypass using `undetected_chromedriver`
+-   [x] OpenAI / Google login support (experimental)
+-   [x] Captcha solvers support (2Captcha, PyPasser)
+-   [x] [Headless machines support](#how-do-i-get-it-to-work-on-headless-linux-server)
 -   [x] Proxy support (only without basic auth)
 
 ## Getting Started
@@ -49,16 +50,18 @@ api = ChatGPT(session_token)  # auth with session token
 api = ChatGPT(session_token, conversation_id='some-random-uuid')  # specify conversation id
 api = ChatGPT(session_token, proxy='http://proxy.example.com:8080')  # specify proxy
 api = ChatGPT(session_token, moderation=False)  # disable moderation
-api = ChatGPT(session_token, window_size=(1024, 768))  # specify window size
+api = ChatGPT(session_token, chrome_args=['--window-size=1920,768'])  # specify chrome args
 api = ChatGPT(session_token, verbose=True)  # verbose mode (print debug messages)
 
 # auth with google login
 api = ChatGPT(auth_type='google', email='example@gmail.com', password='password')
+# auth with microsoft login
+api = ChatGPT(auth_type='microsoft', email='example@gmail.com', password='password')
 # auth with openai login (captcha solving using speech-to-text engine)
 api = ChatGPT(auth_type='openai', email='example@gmail.com', password='password')
 # auth with openai login (manual captcha solving)
 api = ChatGPT(
-    auth_type='openai', captcha_solver='manual',
+    auth_type='openai', captcha_solver=None,
     email='example@gmail.com', password='password'
 )
 # auth with openai login (2captcha for captcha solving)

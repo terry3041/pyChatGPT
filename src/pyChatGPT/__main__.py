@@ -9,8 +9,10 @@ def clear_screen():
 if __name__ == '__main__':
     while True:
         session_token = input('Please enter your session token: ')
-        conversation_id = input('Please enter your conversation id (if you want to continue old chat): ')
-        chat = ChatGPT(session_token,conversation_id)
+        conversation_id = input(
+            'Please enter your conversation id (if you want to continue old chat): '
+        )
+        chat = ChatGPT(session_token, conversation_id)
         break
 
     clear_screen()
