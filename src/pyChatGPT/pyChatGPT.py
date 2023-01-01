@@ -27,6 +27,8 @@ chatgpt_small_response = (
 chatgpt_alert = (By.XPATH, '//div[@role="alert"]')
 chatgpt_intro = (By.ID, 'headlessui-portal-root')
 chatgpt_login_btn = (By.XPATH, '//button[text()="Log in"]')
+chatgpt_login_h1 = (By.XPATH, '//h1[text()="Welcome back"]')
+chatgpt_logged_h1 = (By.XPATH, '//h1[text()="ChatGPT"]')
 
 chatgpt_new_chat = (By.LINK_TEXT, 'New chat')
 chatgpt_clear_convo = (By.LINK_TEXT, 'Clear conversations')
@@ -51,7 +53,7 @@ class ChatGPT:
         auth_type: str = None,
         email: str = None,
         password: str = None,
-        cookies_path: str = '',
+        login_cookies_path: str = '',
         captcha_solver: str = 'pypasser',
         solver_apikey: str = '',
         proxy: str = None,
@@ -66,7 +68,7 @@ class ChatGPT:
         :param auth_type: The authentication type to use (`google`, `microsoft`, `openai`)
         :param email: The email to use for authentication
         :param password: The password to use for authentication
-        :param cookies_path: The path to the cookies file to use for authentication
+        :param login_cookies_path: The path to the cookies file to use for authentication
         :param captcha_solver: The captcha solver to use (`pypasser`, `2captcha`)
         :param solver_apikey: The apikey of the captcha solver to use (if any)
         :param proxy: The proxy to use for the browser (`https://ip:port`)
@@ -81,7 +83,7 @@ class ChatGPT:
         self.__auth_type = auth_type
         self.__email = email
         self.__password = password
-        self.__cookies_path = cookies_path
+        self.__login_cookies_path = login_cookies_path
         self.__captcha_solver = captcha_solver
         self.__solver_apikey = solver_apikey
         self.__proxy = proxy
@@ -96,6 +98,8 @@ class ChatGPT:
             )
         if self.__auth_type not in [None, 'google', 'microsoft', 'openai']:
             raise ValueError('Invalid authentication type')
+        if self.__captcha_solver not in [None, 'pypasser', '2captcha']:
+            raise ValueError('Invalid captcha solver')
         if self.__captcha_solver == '2captcha' and not self.__solver_apikey:
             raise ValueError('Please provide a 2captcha apikey')
         if self.__proxy and not re.findall(
@@ -180,16 +184,16 @@ class ChatGPT:
                 raise ValueError('Chrome installation not found')
             raise e
 
-        if self.__cookies_path and os.path.exists(self.__cookies_path):
+        if self.__login_cookies_path and os.path.exists(self.__login_cookies_path):
             self.logger.debug('Restoring cookies...')
             try:
-                with open(self.__cookies_path, 'r', encoding='utf-8') as f:
+                with open(self.__login_cookies_path, 'r', encoding='utf-8') as f:
                     cookies = json.load(f)
                 for cookie in cookies:
                     if cookie['name'] == '__Secure-next-auth.session-token':
                         self.__session_token = cookie['value']
             except json.decoder.JSONDecodeError:
-                self.logger.debug(f'Invalid cookies file: {self.__cookies_path}')
+                self.logger.debug(f'Invalid cookies file: {self.__login_cookies_path}')
 
         if self.__session_token:
             self.logger.debug('Restoring session_token...')
@@ -232,7 +236,7 @@ class ChatGPT:
         self.logger.debug('Getting Cloudflare challenge...')
         self.driver.get('https://chat.openai.com/api/auth/session')
         try:
-            WebDriverWait(self.driver, 15).until_not(
+            WebDriverWait(self.driver, 10).until_not(
                 EC.presence_of_element_located(cf_challenge_form)
             )
         except SeleniumExceptions.TimeoutException:
@@ -301,7 +305,7 @@ class ChatGPT:
         ).click()
 
         WebDriverWait(self.driver, 5).until(
-            EC.presence_of_element_located((By.XPATH, '//h1[text()="Welcome back"]'))
+            EC.presence_of_element_located(chatgpt_login_h1)
         )
 
         from . import Auth0
@@ -311,11 +315,11 @@ class ChatGPT:
         self.logger.debug('Checking if login was successful')
         try:
             WebDriverWait(self.driver, 5).until(
-                EC.presence_of_element_located((By.XPATH, '//h1[text()="ChatGPT"]'))
+                EC.presence_of_element_located(chatgpt_logged_h1)
             )
-            if self.__cookies_path:
+            if self.__login_cookies_path:
                 self.logger.debug('Saving cookies...')
-                with open(self.__cookies_path, 'w', encoding='utf-8') as f:
+                with open(self.__login_cookies_path, 'w', encoding='utf-8') as f:
                     json.dump(
                         [
                             i
