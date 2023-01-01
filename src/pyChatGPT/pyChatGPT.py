@@ -28,8 +28,22 @@ chatgpt_alert = (By.XPATH, '//div[@role="alert"]')
 chatgpt_intro = (By.ID, 'headlessui-portal-root')
 chatgpt_login_btn = (By.XPATH, '//button[text()="Log in"]')
 
+chatgpt_new_chat = (By.LINK_TEXT, 'New chat')
+chatgpt_clear_convo = (By.LINK_TEXT, 'Clear conversations')
+chatgpt_confirm_clear_convo = (By.LINK_TEXT, 'Confirm clear conversations')
+chatgpt_chat_list = (
+    By.XPATH,
+    '//div[substring(@class, string-length(@class) - string-length("text-sm") + 1)  = "text-sm"]//a',
+)
+
+chatgpt_chat_url = 'https://chat.openai.com/chat'
+
 
 class ChatGPT:
+    '''
+    An unofficial Python wrapper for OpenAI's ChatGPT API
+    '''
+
     def __init__(
         self,
         session_token: str = None,
@@ -45,6 +59,21 @@ class ChatGPT:
         moderation: bool = True,
         verbose: bool = False,
     ):
+        '''
+        Initialize the ChatGPT object\n
+        :param session_token: The session token to use for authentication
+        :param conversation_id: The conversation ID to use for the chat session
+        :param auth_type: The authentication type to use (`google`, `windowslive`, `openai`)
+        :param email: The email to use for authentication
+        :param password: The password to use for authentication
+        :param cookies_path: The path to the cookies file to use for authentication
+        :param captcha_solver: The captcha solver to use (`pypasser`, `2captcha`)
+        :param solver_apikey: The apikey of the captcha solver to use (if any)
+        :param proxy: The proxy to use for the browser (`https://ip:port`)
+        :param chrome_args: The arguments to pass to the browser
+        :param moderation: Whether to enable message moderation
+        :param verbose: Whether to enable verbose logging
+        '''
         self.__init_logger(verbose)
 
         self.__session_token = session_token
@@ -92,6 +121,9 @@ class ChatGPT:
         self.__init_browser()
 
     def __del__(self):
+        '''
+        Close the browser and display
+        '''
         if hasattr(self, 'driver'):
             self.logger.debug('Closing browser...')
             self.driver.quit()
@@ -100,6 +132,10 @@ class ChatGPT:
             self.display.stop()
 
     def __init_logger(self, verbose: bool) -> None:
+        '''
+        Initialize the logger\n
+        :param verbose: Whether to enable verbose logging
+        '''
         self.logger = logging.getLogger('pyChatGPT')
         self.logger.setLevel(logging.DEBUG)
         if verbose:
@@ -109,6 +145,9 @@ class ChatGPT:
             self.logger.addHandler(stream_handler)
 
     def __init_browser(self) -> None:
+        '''
+        Initialize the browser
+        '''
         if platform.system() == 'Linux' and 'DISPLAY' not in os.environ:
             self.logger.debug('Starting virtual display...')
             try:
@@ -177,11 +216,15 @@ class ChatGPT:
         self.__ensure_cf()
 
         self.logger.debug('Opening chat page...')
-        self.driver.get('https://chat.openai.com/chat/' + self.__conversation_id)
+        self.driver.get(f'{chatgpt_chat_url}/{self.__conversation_id}')
         self.__check_blocking_elements()
         Thread(target=self.__keep_alive, daemon=True).start()
 
     def __ensure_cf(self, retry: int = 3) -> None:
+        '''
+        Ensure Cloudflare cookies are set\n
+        :param retry: Number of retries
+        '''
         self.logger.debug('Opening new tab...')
         original_window = self.driver.current_window_handle
         self.driver.switch_to.new_window('tab')
@@ -222,6 +265,10 @@ class ChatGPT:
         self.driver.switch_to.window(original_window)
 
     def __check_capacity(self, target_url: str):
+        '''
+        Check if ChatGPT is at capacity\n
+        :param target_url: URL to retry if ChatGPT is at capacity
+        '''
         while True:
             try:
                 self.logger.debug('Checking if ChatGPT is at capacity...')
@@ -237,6 +284,9 @@ class ChatGPT:
                 break
 
     def __login(self) -> None:
+        '''
+        Login to ChatGPT
+        '''
         self.logger.debug('Opening new tab...')
         original_window = self.driver.current_window_handle
         self.driver.switch_to.new_window('tab')
@@ -285,7 +335,7 @@ class ChatGPT:
     def __keep_alive(self) -> None:
         '''
         Keep the session alive by updating the local storage\n
-        Credit to Rawa in the ChatGPT Hacking Discord server
+        Credit to Rawa#8132 in the ChatGPT Hacking Discord server
         '''
         while True:
             self.logger.debug('Updating session...')
@@ -300,6 +350,9 @@ class ChatGPT:
             time.sleep(60)
 
     def __check_blocking_elements(self) -> None:
+        '''
+        Check for blocking elements and dismiss them
+        '''
         self.logger.debug('Looking for blocking elements...')
         try:
             intro = WebDriverWait(self.driver, 3).until(
@@ -316,6 +369,11 @@ class ChatGPT:
             self.driver.execute_script('arguments[0].remove()', alerts[0])
 
     def send_message(self, message: str) -> dict:
+        '''
+        Send a message to ChatGPT\n
+        :param message: Message to send
+        :return: Dictionary with keys `message`, `conversation_id` and `parent_id`
+        '''
         self.logger.debug('Ensuring Cloudflare cookies...')
         self.__ensure_cf()
 
@@ -354,11 +412,52 @@ class ChatGPT:
         )
         return {'message': content, 'conversation_id': '', 'parent_id': ''}
 
-    def refresh_chat_page(self) -> None:
-        chat_url = 'https://chat.openai.com/chat'
-        if not self.driver.current_url.startswith(chat_url):
-            return self.__verbose_print(f'[refresh] current_url is not {chat_url}')
+    def reset_conversation(self) -> None:
+        '''
+        Reset the conversation
+        '''
+        if not self.driver.current_url.startswith(chatgpt_chat_url):
+            return self.logger.debug('Current URL is not chat page, skipping reset')
 
-        self.driver.get(chat_url)
-        self.__check_capacity(chat_url)
+        self.logger.debug('Resetting conversation...')
+        try:
+            self.driver.find_element(*chatgpt_new_chat).click()
+        except SeleniumExceptions.NoSuchElementException:
+            self.logger.debug('New chat button not found')
+            self.driver.save_screenshot('reset_conversation_failed.png')
+
+    def clear_conversations(self) -> None:
+        '''
+        Clear all conversations
+        '''
+        if not self.driver.current_url.startswith(chatgpt_chat_url):
+            return self.logger.debug('Current URL is not chat page, skipping clear')
+
+        self.logger.debug('Clearing conversations...')
+        try:
+            self.driver.find_element(*chatgpt_clear_convo).click()
+        except SeleniumExceptions.NoSuchElementException:
+            self.logger.debug('Clear conversations button not found')
+
+        try:
+            self.driver.find_element(*chatgpt_confirm_clear_convo).click()
+        except SeleniumExceptions.NoSuchElementException:
+            return self.logger.debug('Confirm clear conversations button not found')
+        try:
+            WebDriverWait(self.driver, 20).until_not(
+                EC.presence_of_element_located(chatgpt_chat_list)
+            )
+            self.logger.debug('Cleared conversations')
+        except SeleniumExceptions.TimeoutException:
+            self.logger.debug('Clear conversations failed')
+
+    def refresh_chat_page(self) -> None:
+        '''
+        Refresh the chat page
+        '''
+        if not self.driver.current_url.startswith(chatgpt_chat_url):
+            return self.logger.debug('Current URL is not chat page, skipping refresh')
+
+        self.driver.get(chatgpt_chat_url)
+        self.__check_capacity(chatgpt_chat_url)
         self.__check_blocking_elements()

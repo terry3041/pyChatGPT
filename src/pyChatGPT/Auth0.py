@@ -22,14 +22,20 @@ openai_captcha_sitekey = (
 )
 
 
-def login(self) -> bool:
+def login(self) -> None:
+    '''
+    Login to ChatGPT
+    '''
     if self._ChatGPT__auth_type == 'google':
         __google_login(self)
     elif self._ChatGPT__auth_type == 'openai':
         __openai_login(self)
 
 
-def __google_login(self):
+def __google_login(self) -> None:
+    '''
+    Login to ChatGPT using Google
+    '''
     self.logger.debug('Clicking Google button')
     self.driver.find_element(By.XPATH, '//button[@data-provider="google"]').click()
 
@@ -80,7 +86,11 @@ def __google_login(self):
         self.logger.debug('Code is not required')
 
 
-def __have_recaptcha_value(self):
+def __have_recaptcha_value(self) -> bool:
+    '''
+    Check if the recaptcha input has a value
+    :return: Boolean indicating if the recaptcha input has a value
+    '''
     try:
         recaptcha_result = self.driver.find_element(*openai_captcha_input)
         return recaptcha_result.get_attribute('value') != ''
@@ -88,7 +98,11 @@ def __have_recaptcha_value(self):
         return False
 
 
-def __pypasser_solve(self, retry: int):
+def __pypasser_solve(self, retry: int) -> None:
+    '''
+    Solve the recaptcha using PyPasser
+    :param retry: Number of times to retry solving the recaptcha
+    '''
     try:
         from pypasser import reCaptchaV2
     except ModuleNotFoundError:
@@ -103,7 +117,11 @@ def __pypasser_solve(self, retry: int):
         self.logger.debug(f'pypasser solver error: {str(e)}')
 
 
-def __twocaptcha_solve(self, retry: int):
+def __twocaptcha_solve(self, retry: int) -> None:
+    '''
+    Solve the recaptcha using 2captcha
+    :param retry: Number of times to retry solving the recaptcha
+    '''
     try:
         from twocaptcha import TwoCaptcha
     except ModuleNotFoundError:
@@ -137,7 +155,11 @@ def __twocaptcha_solve(self, retry: int):
             self.logger.debug(f'2captcha solver error: {str(e)}')
 
 
-def __openai_login(self, retry: int = 3):
+def __openai_login(self, retry: int = 3) -> None:
+    '''
+    Login to ChatGPT using OpenAI
+    :param retry: Number of times to retry solving the recaptcha
+    '''
     self.logger.debug('Entering email...')
     self.driver.find_element(*openai_email_input).send_keys(self._ChatGPT__email)
     self.driver.find_element(*openai_continue_btn).click()
