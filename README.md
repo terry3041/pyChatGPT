@@ -121,7 +121,6 @@ This project is inspired by
 
 -   [ChatGPT](https://github.com/acheong08/ChatGPT)
 -   [chatgpt-api](https://github.com/transitive-bullshit/chatgpt-api)
--   [PyChatGPT](https://github.com/rawandahmad698/PyChatGPT)
 
 ## Disclaimer
 
