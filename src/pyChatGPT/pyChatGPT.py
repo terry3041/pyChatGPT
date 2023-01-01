@@ -63,7 +63,7 @@ class ChatGPT:
         Initialize the ChatGPT object\n
         :param session_token: The session token to use for authentication
         :param conversation_id: The conversation ID to use for the chat session
-        :param auth_type: The authentication type to use (`google`, `windowslive`, `openai`)
+        :param auth_type: The authentication type to use (`google`, `microsoft`, `openai`)
         :param email: The email to use for authentication
         :param password: The password to use for authentication
         :param cookies_path: The path to the cookies file to use for authentication
@@ -94,7 +94,7 @@ class ChatGPT:
             raise ValueError(
                 'Please provide either a session token or login credentials'
             )
-        if self.__auth_type not in [None, 'google', 'windowslive', 'openai']:
+        if self.__auth_type not in [None, 'google', 'microsoft', 'openai']:
             raise ValueError('Invalid authentication type')
         if self.__captcha_solver == '2captcha' and not self.__solver_apikey:
             raise ValueError('Please provide a 2captcha apikey')
@@ -343,10 +343,13 @@ class ChatGPT:
                 '{"event":"session","data":{"trigger":"getSession"},"timestamp":%d}'
                 % int(time.time())
             )
-            self.driver.execute_script(
-                'window.localStorage.setItem("nextauth.message", arguments[0])',
-                payload,
-            )
+            try:
+                self.driver.execute_script(
+                    'window.localStorage.setItem("nextauth.message", arguments[0])',
+                    payload,
+                )
+            except Exception as e:
+                self.logger.debug(f'Failed to update session: {str(e)}')
             time.sleep(60)
 
     def __check_blocking_elements(self) -> None:

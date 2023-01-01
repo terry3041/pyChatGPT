@@ -5,12 +5,18 @@ from selenium.webdriver.common.by import By
 
 import time
 
+google_oauth_btn = (By.XPATH, '//button[@data-provider="google"]')
+microsoft_oauth_btn = (By.XPATH, '//button[@data-provider="windowslive"]')
 
 google_email_input = (By.XPATH, '//input[@type="email"]')
 google_next_btn = (By.XPATH, '//*[@id="identifierNext"]')
 google_pwd_input = (By.XPATH, '//input[@type="password"]')
 google_pwd_next_btn = (By.XPATH, '//*[@id="passwordNext"]')
 google_code_samp = (By.TAG_NAME, 'samp')
+
+microsoft_email_input = (By.XPATH, '//input[@type="email"]')
+microsoft_pwd_input = (By.XPATH, '//input[@type="password"]')
+microsoft_next_btn = (By.XPATH, '//input[@type="submit"]')
 
 openai_email_input = (By.XPATH, '//input[@name="username"]')
 openai_pwd_input = (By.XPATH, '//input[@type="password"]')
@@ -28,6 +34,8 @@ def login(self) -> None:
     '''
     if self._ChatGPT__auth_type == 'google':
         __google_login(self)
+    elif self._ChatGPT__auth_type == 'microsoft':
+        __microsoft_login(self)
     elif self._ChatGPT__auth_type == 'openai':
         __openai_login(self)
 
@@ -36,12 +44,12 @@ def __google_login(self) -> None:
     '''
     Login to ChatGPT using Google
     '''
-    self.logger.debug('Clicking Google button')
-    self.driver.find_element(By.XPATH, '//button[@data-provider="google"]').click()
+    self.logger.debug('Clicking Google button...')
+    self.driver.find_element(*google_oauth_btn).click()
 
     google_email_entry = (By.XPATH, f'//div[@data-identifier="{self._ChatGPT__email}"]')
     try:
-        self.logger.debug('Checking if Google remembers emai')
+        self.logger.debug('Checking if Google remembers emai...')
 
         WebDriverWait(self.driver, 3).until(
             EC.element_to_be_clickable(google_email_entry)
@@ -50,24 +58,24 @@ def __google_login(self) -> None:
 
     except SeleniumExceptions.TimeoutException:
         self.logger.debug('Google does not remember email')
-        self.logger.debug('Entering email')
+        self.logger.debug('Entering email...')
         WebDriverWait(self.driver, 5).until(
             EC.element_to_be_clickable(google_email_input)
         ).send_keys(self._ChatGPT__email)
 
-        self.logger.debug('Clicking Next')
+        self.logger.debug('Clicking Next...')
         self.driver.find_element(*google_next_btn).click()
 
-        self.logger.debug('Entering password')
+        self.logger.debug('Entering password...')
         WebDriverWait(self.driver, 5).until(
             EC.element_to_be_clickable(google_pwd_input)
         ).send_keys(self._ChatGPT__password)
 
-        self.logger.debug('Clicking Next')
+        self.logger.debug('Clicking Next...')
         self.driver.find_element(*google_pwd_next_btn).click()
 
     try:
-        self.logger.debug('Checking if verification code is required')
+        self.logger.debug('Checking if verification code is required...')
         WebDriverWait(self.driver, 5).until(
             EC.presence_of_element_located(google_code_samp)
         )
@@ -84,6 +92,32 @@ def __google_login(self) -> None:
             time.sleep(1)
     except SeleniumExceptions.TimeoutException:
         self.logger.debug('Code is not required')
+
+
+def __microsoft_login(self) -> None:
+    self.logger.debug('Clicking Microsoft button...')
+    self.driver.find_element(*microsoft_oauth_btn).click()
+
+    self.logger.debug('Entering email...')
+    WebDriverWait(self.driver, 5).until(
+        EC.element_to_be_clickable(microsoft_email_input)
+    ).send_keys(self._ChatGPT__email)
+
+    self.logger.debug('Clicking Next...')
+    self.driver.find_element(*microsoft_next_btn).click()
+
+    self.logger.debug('Entering password...')
+    WebDriverWait(self.driver, 5).until(
+        EC.element_to_be_clickable(microsoft_pwd_input)
+    ).send_keys(self._ChatGPT__password)
+
+    self.logger.debug('Clicking Next...')
+    self.driver.find_element(*microsoft_next_btn).click()
+
+    self.logger.debug('Clicking allow...')
+    WebDriverWait(self.driver, 5).until(
+        EC.element_to_be_clickable(microsoft_next_btn)
+    ).click()
 
 
 def __have_recaptcha_value(self) -> bool:
