@@ -33,7 +33,7 @@ chatgpt_logged_h1 = (By.XPATH, '//h1[text()="ChatGPT"]')
 chatgpt_new_chat = (By.LINK_TEXT, 'New chat')
 chatgpt_clear_convo = (By.LINK_TEXT, 'Clear conversations')
 chatgpt_confirm_clear_convo = (By.LINK_TEXT, 'Confirm clear conversations')
-chatgpt_chat_list = (
+chatgpt_chats_list_first_node = (
     By.XPATH,
     '//div[substring(@class, string-length(@class) - string-length("text-sm") + 1)  = "text-sm"]//a',
 )
@@ -379,7 +379,7 @@ class ChatGPT:
         '''
         Send a message to ChatGPT\n
         :param message: Message to send
-        :return: Dictionary with keys `message`, `conversation_id` and `parent_id`
+        :return: Dictionary with keys `message` and `conversation_id`
         '''
         self.logger.debug('Ensuring Cloudflare cookies...')
         self.__ensure_cf()
@@ -417,7 +417,18 @@ class ChatGPT:
         content = markdownify(response.get_attribute('innerHTML')).replace(
             'Copy code`', '`'
         )
-        return {'message': content, 'conversation_id': '', 'parent_id': ''}
+        pattern = re.compile(
+            r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+        )
+        matches = pattern.search(self.driver.current_url)
+        if not matches:
+            self.reset_conversation()
+            WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable(chatgpt_chats_list_first_node)
+            ).click()
+            matches = pattern.search(self.driver.current_url)
+        conversation_id = matches.group()
+        return {'message': content, 'conversation_id': conversation_id}
 
     def reset_conversation(self) -> None:
         '''
@@ -452,7 +463,7 @@ class ChatGPT:
             return self.logger.debug('Confirm clear conversations button not found')
         try:
             WebDriverWait(self.driver, 20).until_not(
-                EC.presence_of_element_located(chatgpt_chat_list)
+                EC.presence_of_element_located(chatgpt_chats_list_first_node)
             )
             self.logger.debug('Cleared conversations')
         except SeleniumExceptions.TimeoutException:
