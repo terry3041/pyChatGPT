@@ -9,7 +9,7 @@ An unofficial Python wrapper for OpenAI's ChatGPT API
 ## Features
 
 -   [x] Cloudflare's anti-bot protection bypass using `undetected_chromedriver`
--   [x] OpenAI / Google login support (experimental)
+-   [x] OpenAI / Google / Microsoft login support (experimental)
 -   [x] Captcha solvers support (2Captcha, PyPasser)
 -   [x] [Headless machines support](#how-do-i-get-it-to-work-on-headless-linux-server)
 -   [x] Proxy support (only without basic auth)
@@ -48,9 +48,9 @@ from pyChatGPT import ChatGPT
 session_token = 'abc123'  # `__Secure-next-auth.session-token` cookie from https://chat.openai.com/chat
 api = ChatGPT(session_token)  # auth with session token
 api = ChatGPT(session_token, conversation_id='some-random-uuid')  # specify conversation id
-api = ChatGPT(session_token, proxy='http://proxy.example.com:8080')  # specify proxy
-api = ChatGPT(session_token, moderation=False)  # disable moderation
+api = ChatGPT(session_token, proxy='https://proxy.example.com:8080')  # specify proxy
 api = ChatGPT(session_token, chrome_args=['--window-size=1920,768'])  # specify chrome args
+api = ChatGPT(session_token, moderation=False)  # disable moderation
 api = ChatGPT(session_token, verbose=True)  # verbose mode (print debug messages)
 
 # auth with google login
