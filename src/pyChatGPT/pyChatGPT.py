@@ -128,6 +128,7 @@ class ChatGPT:
         '''
         Close the browser and display
         '''
+        self.__is_active = False
         if hasattr(self, 'driver'):
             self.logger.debug('Closing browser...')
             self.driver.quit()
@@ -222,6 +223,8 @@ class ChatGPT:
         self.logger.debug('Opening chat page...')
         self.driver.get(f'{chatgpt_chat_url}/{self.__conversation_id}')
         self.__check_blocking_elements()
+
+        self.__is_active = True
         Thread(target=self.__keep_alive, daemon=True).start()
 
     def __ensure_cf(self, retry: int = 3) -> None:
@@ -341,7 +344,7 @@ class ChatGPT:
         Keep the session alive by updating the local storage\n
         Credit to Rawa#8132 in the ChatGPT Hacking Discord server
         '''
-        while True:
+        while self.__is_active:
             self.logger.debug('Updating session...')
             payload = (
                 '{"event":"session","data":{"trigger":"getSession"},"timestamp":%d}'
@@ -354,7 +357,7 @@ class ChatGPT:
                 )
             except Exception as e:
                 self.logger.debug(f'Failed to update session: {str(e)}')
-            time.sleep(60)
+            time.sleep(1)
 
     def __check_blocking_elements(self) -> None:
         '''
