@@ -357,7 +357,7 @@ class ChatGPT:
                 )
             except Exception as e:
                 self.logger.debug(f'Failed to update session: {str(e)}')
-            time.sleep(1)
+            time.sleep(60)
 
     def __check_blocking_elements(self) -> None:
         '''
