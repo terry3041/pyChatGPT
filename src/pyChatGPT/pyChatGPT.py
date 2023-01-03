@@ -375,7 +375,25 @@ class ChatGPT:
             self.logger.debug('Dismissing alert...')
             self.driver.execute_script('arguments[0].remove()', alerts[0])
 
-    def send_message(self, message: str) -> dict:
+    def __stream_message(self):
+        prev_content = ''
+        while True:
+            result_streaming = self.driver.find_elements(*chatgpt_streaming)
+            responses = self.driver.find_elements(*chatgpt_big_response)
+            if responses:
+                response = responses[-1]
+                if 'text-red' in response.get_attribute('class'):
+                    self.logger.debug('Response is an error')
+                    raise ValueError(response.text)
+            response = self.driver.find_elements(*chatgpt_small_response)[-1]
+            content = response.text
+            if content != prev_content:
+                yield content[len(prev_content) :]
+                prev_content = content
+            if not result_streaming:
+                break
+
+    def send_message(self, message: str, stream: bool = False) -> dict:
         '''
         Send a message to ChatGPT\n
         :param message: Message to send
@@ -399,6 +417,12 @@ class ChatGPT:
             message,
         )
         textbox.send_keys(Keys.ENTER)
+
+        if stream:
+            for i in self.__stream_message():
+                print(i, end='')
+                time.sleep(0.1)
+            return print()
 
         self.logger.debug('Waiting for completion...')
         WebDriverWait(self.driver, 120).until_not(
