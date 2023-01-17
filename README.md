@@ -98,7 +98,7 @@ python3 your_script.py
 
 ### How do I get it to work on Google Colab?
 
-It is normal for the seession to be crashed when installing dependencies. Just ignore the error and run your script.
+It is normal for the session to crash while installing dependencies. Just ignore the error message and run your script.
 
 ```python
 # install dependencies
