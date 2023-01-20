@@ -9,6 +9,7 @@ from markdownify import markdownify
 from threading import Thread
 import platform
 import logging
+import weakref
 import json
 import time
 import re
@@ -117,12 +118,13 @@ class ChatGPT:
             ffmpeg_installed = bool(ffdl.ffmpeg_version)
             self.logger.debug(f'ffmpeg installed: {ffmpeg_installed}')
             if not ffmpeg_installed:
-                import subprocess as sp
+                import subprocess
 
-                sp.run(['ffdl', 'install'])
+                subprocess.run(['ffdl', 'install'])
             os.environ['PATH'] += os.pathsep + ffdl.ffmpeg_dir
 
         self.__init_browser()
+        weakref.finalize(self, self.__del__)
 
     def __del__(self):
         '''
