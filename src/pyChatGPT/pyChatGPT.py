@@ -455,6 +455,7 @@ class ChatGPT:
             WebDriverWait(self.driver, 5).until(
                 EC.element_to_be_clickable(chatgpt_chats_list_first_node)
             ).click()
+            time.sleep(0.5)
             matches = pattern.search(self.driver.current_url)
         conversation_id = matches.group()
         return {'message': content, 'conversation_id': conversation_id}
