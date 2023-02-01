@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/github/license/terry3041/pyChatGPT.svg?color=green)](https://github.com/terry3041/pyChatGPT/blob/main/LICENSE)
 ![PyPi](https://img.shields.io/badge/code_style-black+flake8-blue.svg)
 
-> Currently busy with IRL stuff, expect slow or even ceased development. If you want to contribute, feel free to open a PR, or consider using [acheong08/ChatGPT](https://github.com/acheong08/ChatGPT) with a leaked official API.
+> Currently busy with IRL stuff, expect slow or even ceased development. If you want to contribute, feel free to open a PR. If you want a properly maintained API wrapper, consider using [acheong08/ChatGPT](https://github.com/acheong08/ChatGPT) with a leaked official API.
 
 An unofficial Python wrapper for OpenAI's ChatGPT API
 
