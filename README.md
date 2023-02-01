@@ -4,6 +4,8 @@
 [![License](https://img.shields.io/github/license/terry3041/pyChatGPT.svg?color=green)](https://github.com/terry3041/pyChatGPT/blob/main/LICENSE)
 ![PyPi](https://img.shields.io/badge/code_style-black+flake8-blue.svg)
 
+> Currently busy with IRL stuff, expect slow or even ceased development.
+
 An unofficial Python wrapper for OpenAI's ChatGPT API
 
 ## Features
