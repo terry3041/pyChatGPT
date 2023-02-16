@@ -474,6 +474,11 @@ class ChatGPT:
             self.logger.debug('New chat button not found')
             self.driver.save_screenshot('reset_conversation_failed.png')
 
+    def set_conversation(self,conversation_id):
+        self.logger.debug('Opening chat page...')
+        self.driver.get(f'{chatgpt_chat_url}/{conversation_id}')
+        self.__check_blocking_elements()
+
     def clear_conversations(self) -> None:
         '''
         Clear all conversations
