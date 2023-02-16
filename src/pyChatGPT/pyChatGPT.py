@@ -475,9 +475,15 @@ class ChatGPT:
             self.driver.save_screenshot('reset_conversation_failed.png')
 
     def set_conversation(self,conversation_id):
-        self.logger.debug('Opening chat page...')
-        self.driver.get(f'{chatgpt_chat_url}/{conversation_id}')
-        self.__check_blocking_elements()
+        '''
+        Chagne current conversation
+        '''
+        try:
+            self.logger.debug('Opening chat page...')
+            self.driver.get(f'{chatgpt_chat_url}/{conversation_id}')
+            self.__check_blocking_elements()
+        except:
+            self.logger.debug('Conversation not found')
 
     def clear_conversations(self) -> None:
         '''
