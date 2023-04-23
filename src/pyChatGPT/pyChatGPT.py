@@ -39,7 +39,7 @@ chatgpt_chats_list_first_node = (
     '//div[substring(@class, string-length(@class) - string-length("text-sm") + 1)  = "text-sm"]//a',
 )
 
-chatgpt_chat_url = 'https://chat.openai.com/chat'
+chatgpt_chat_url = 'https://chat.openai.com'
 
 
 class ChatGPT:
@@ -60,6 +60,7 @@ class ChatGPT:
         proxy: str = None,
         chrome_args: list = [],
         moderation: bool = True,
+        gpt_4: bool = True,
         verbose: bool = False,
     ):
         '''
@@ -90,6 +91,7 @@ class ChatGPT:
         self.__proxy = proxy
         self.__chrome_args = chrome_args
         self.__moderation = moderation
+        self.__gpt_4 = gpt_4
 
         if not self.__session_token and (
             not self.__email or not self.__password or not self.__auth_type
@@ -223,7 +225,15 @@ class ChatGPT:
         self.__ensure_cf()
 
         self.logger.debug('Opening chat page...')
-        self.driver.get(f'{chatgpt_chat_url}/{self.__conversation_id}')
+
+        #if conversation_id is empty then it will open a new chat
+        if not self.__conversation_id:
+            if self.__gpt_4:
+                self.driver.get(f'{chatgpt_chat_url}/?model=gpt-4')
+            else:
+                self.driver.get(f'{chatgpt_chat_url}')
+        else:
+            self.driver.get(f'{chatgpt_chat_url}/{self.__conversation_id}')
         self.__check_blocking_elements()
 
         self.__is_active = True
@@ -433,6 +443,7 @@ class ChatGPT:
         WebDriverWait(self.driver, 120).until_not(
             EC.presence_of_element_located(chatgpt_streaming)
         )
+        self.close_chat_research_popup()
 
         self.logger.debug('Getting response...')
         responses = self.driver.find_elements(*chatgpt_big_response)
@@ -509,3 +520,24 @@ class ChatGPT:
         self.driver.get(chatgpt_chat_url)
         self.__check_capacity(chatgpt_chat_url)
         self.__check_blocking_elements()
+
+    def close_chat_page(self) -> None:
+        '''
+        Close the chat page
+        '''
+        if not self.driver.current_url.startswith(chatgpt_chat_url):
+            return self.logger.debug('Current URL is not chat page, skipping close')
+
+        self.driver.close()
+
+    def close_chat_research_popup(self) -> None:
+        '''
+        Close the ChatGPT Research popup
+        '''
+        self.driver.execute_script("""
+            var elements = document.querySelectorAll('[role="dialog"]');
+            console.log(elements);
+            for (var i = 0; i < elements.length; i++) {
+                elements[i].style.display = 'none';
+            }
+        """)

@@ -10,6 +10,7 @@ An unofficial Python wrapper for OpenAI's ChatGPT API
 
 ## Features
 
+-   [x] GPT-4: OpenAI's latest and most powerful language model ✨.
 -   [x] Cloudflare's anti-bot protection bypass using `undetected_chromedriver`
 -   [x] OpenAI / Google / Microsoft login support (experimental)
 -   [x] Captcha solvers support (2Captcha, PyPasser)
@@ -53,6 +54,7 @@ api = ChatGPT(session_token, conversation_id='some-random-uuid')  # specify conv
 api = ChatGPT(session_token, proxy='https://proxy.example.com:8080')  # specify proxy
 api = ChatGPT(session_token, chrome_args=['--window-size=1920,768'])  # specify chrome args
 api = ChatGPT(session_token, moderation=False)  # disable moderation
+api = ChatGPT(session_token, gpt_4=True) # GPT-4 ✨ (Only available for paid plans)
 api = ChatGPT(session_token, verbose=True)  # verbose mode (print debug messages)
 
 # auth with google login
@@ -84,6 +86,7 @@ print(resp['message'])
 api.reset_conversation()  # reset the conversation
 api.clear_conversations()  # clear all conversations
 api.refresh_chat_page()  # refresh the chat page
+api.close_chat_page()  # close the chat page
 ```
 
 ## Frequently Asked Questions
