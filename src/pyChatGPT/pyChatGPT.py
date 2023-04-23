@@ -60,7 +60,7 @@ class ChatGPT:
         proxy: str = None,
         chrome_args: list = [],
         moderation: bool = True,
-        gpt_4: bool = True,
+        gpt_4: bool = False,
         verbose: bool = False,
     ):
         '''
