@@ -27,7 +27,7 @@ chatgpt_small_response = (
 )
 chatgpt_alert = (By.XPATH, '//div[@role="alert"]')
 chatgpt_intro = (By.ID, 'headlessui-portal-root')
-chatgpt_login_btn = (By.XPATH, '//button[text()="Log in"]')
+chatgpt_login_btn = (By.XPATH, '//button[contains(normalize-space(.), "Log in")]')
 chatgpt_login_h1 = (By.XPATH, '//h1[text()="Welcome back"]')
 chatgpt_logged_h1 = (By.XPATH, '//h1[text()="ChatGPT"]')
 
