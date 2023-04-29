@@ -490,7 +490,7 @@ class ChatGPT:
         except SeleniumExceptions.NoSuchElementException:
             self.logger.debug('New chat button not found')
             self.driver.save_screenshot('reset_conversation_failed.png')
-        if model == "gpt-4":
+        if self.__model == "4":
             self.__select_gpt4()
         self.__conversation_id = None
 
@@ -529,5 +529,5 @@ class ChatGPT:
         self.driver.get(chatgpt_chat_url)
         self.__check_capacity(chatgpt_chat_url)
         self.__check_blocking_elements()
-        if self.__model == "gpt-4":
+        if self.__model == "4":
             self.__select_gpt4()
