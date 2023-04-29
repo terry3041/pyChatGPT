@@ -61,6 +61,7 @@ class ChatGPT:
         chrome_args: list = [],
         moderation: bool = True,
         verbose: bool = False,
+        model: str = "3.5"
     ):
         '''
         Initialize the ChatGPT object\n
@@ -90,6 +91,7 @@ class ChatGPT:
         self.__proxy = proxy
         self.__chrome_args = chrome_args
         self.__moderation = moderation
+        self.__model = model
 
         if not self.__session_token and (
             not self.__email or not self.__password or not self.__auth_type
@@ -227,7 +229,22 @@ class ChatGPT:
         self.__check_blocking_elements()
 
         self.__is_active = True
+        if self.__model == "4":
+            self.__select_gpt4()
         Thread(target=self.__keep_alive, daemon=True).start()
+
+    def __select_gpt4(self) -> None:
+        partial_id = "headlessui-listbox-button-"
+        css_selector = f'[id*="{partial_id}"]'
+        select_button = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
+        select_button.click()
+        partial_id = "headlessui-listbox-option-"
+        css_selector = f'[id*="{partial_id}"]'
+        WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
+        model_items = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
+        for model in model_items:
+            if model.text == "GPT-4":
+                model.click()
 
     def __ensure_cf(self, retry: int = 3) -> None:
         '''
@@ -473,6 +490,9 @@ class ChatGPT:
         except SeleniumExceptions.NoSuchElementException:
             self.logger.debug('New chat button not found')
             self.driver.save_screenshot('reset_conversation_failed.png')
+        if model == "gpt-4":
+            self.__select_gpt4()
+        self.__conversation_id = None
 
     def clear_conversations(self) -> None:
         '''
@@ -509,3 +529,5 @@ class ChatGPT:
         self.driver.get(chatgpt_chat_url)
         self.__check_capacity(chatgpt_chat_url)
         self.__check_blocking_elements()
+        if self.__model == "gpt-4":
+            self.__select_gpt4()
