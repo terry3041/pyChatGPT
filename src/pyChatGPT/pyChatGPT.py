@@ -15,12 +15,12 @@ import time
 import re
 import os
 
-
 cf_challenge_form = (By.ID, 'challenge-form')
-
 chatgpt_textbox = (By.TAG_NAME, 'textarea')
 chatgpt_streaming = (By.CLASS_NAME, 'result-streaming')
 chatgpt_big_response = (By.XPATH, '//div[@class="flex-1 overflow-hidden"]//div[p]')
+# NOTE: The event result-streaming does not exists anymore. Thus, now Im waiting for the loading button event
+chatgpt_streaming = (By.CLASS_NAME, 'text-2xl')
 chatgpt_small_response = (
     By.XPATH,
     '//div[starts-with(@class, "markdown prose w-full break-words")]',
@@ -408,7 +408,7 @@ class ChatGPT:
         self.__ensure_cf()
 
         self.logger.debug('Sending message...')
-        textbox = WebDriverWait(self.driver, 5).until(
+        textbox = WebDriverWait(self.driver, 8).until(
             EC.element_to_be_clickable(chatgpt_textbox)
         )
         textbox.click()
@@ -422,16 +422,18 @@ class ChatGPT:
             message,
         )
         textbox.send_keys(Keys.ENTER)
-
+        textbox.send_keys(Keys.ENTER)
+        # check the result-streaming tag (it doesnt seems to work) 
         if stream:
             for i in self.__stream_message():
                 print(i, end='')
                 time.sleep(0.1)
             return print()
-
+        time.sleep(1)
         self.logger.debug('Waiting for completion...')
-        WebDriverWait(self.driver, 120).until_not(
-            EC.presence_of_element_located(chatgpt_streaming)
+        # FIXED: new chatgpt_streaming
+        WebDriverWait(self.driver, 200).until_not(
+            EC.presence_of_element_located(chatgpt_streaming)            
         )
 
         self.logger.debug('Getting response...')
@@ -509,3 +511,4 @@ class ChatGPT:
         self.driver.get(chatgpt_chat_url)
         self.__check_capacity(chatgpt_chat_url)
         self.__check_blocking_elements()
+
