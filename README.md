@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/github/license/terry3041/pyChatGPT.svg?color=green)](https://github.com/terry3041/pyChatGPT/blob/main/LICENSE)
 ![PyPi](https://img.shields.io/badge/code_style-black+flake8-blue.svg)
 
-> Currently busy with IRL stuff, expect slow or even ceased development. If you want to contribute, feel free to open a PR. If you want an actively maintained API wrapper, consider using [acheong08/ChatGPT](https://github.com/acheong08/ChatGPT) with a leaked official API.
+> I stopped maintaining this project as ChatGPT now has an official API. See [OpenAI API](https://beta.openai.com/docs/api-reference/introduction) for more details. Feel free to fork this project if you want to continue development.
 
 An unofficial Python wrapper for OpenAI's ChatGPT API
 
@@ -100,7 +100,7 @@ python3 your_script.py
 
 ### How do I get it to work on Google Colab?
 
-It is normal for the seession to be crashed when installing dependencies. Just ignore the error and run your script.
+It is normal for the seession to crash when installing dependencies. Just ignore the error and run your script.
 
 ```python
 # install dependencies
