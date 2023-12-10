@@ -450,15 +450,21 @@ class ChatGPT:
             r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
         )
         matches = pattern.search(self.driver.current_url)
-        if not matches:
+        if matches:
+            conversation_id = matches.group()
+        else:
             self.reset_conversation()
             WebDriverWait(self.driver, 5).until(
                 EC.element_to_be_clickable(chatgpt_chats_list_first_node)
             ).click()
             time.sleep(0.5)
             matches = pattern.search(self.driver.current_url)
-        conversation_id = matches.group()
+            if matches:
+                conversation_id = matches.group()
+            else:
+                raise ValueError('Could not extract conversation ID')
         return {'message': content, 'conversation_id': conversation_id}
+
 
     def reset_conversation(self) -> None:
         '''
